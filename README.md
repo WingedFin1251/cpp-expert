@@ -191,13 +191,3 @@ Automatically detects C vs C++ (by file extension) and switches between `gcc`/`g
 MIT
 
 ---
-
-<details>
-<summary>🌐 语言切换 / Language Switcher</summary>
-
-- **中文 / Chinese** — 你正在阅读双语版本 / You are reading the bilingual version
-- **English** — 此 README 为中英双语对照 / This README is bilingual (Chinese-English parallel)
-
-</details>
-
----
