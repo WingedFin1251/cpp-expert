@@ -17,7 +17,6 @@
 - [工作流程 / Workflow](#工作流程--workflow)
 - [工具脚本 / Tool Scripts](#工具脚本--tool-scripts)
 - [代码审查输出格式 / Review Output Format](#代码审查输出格式--review-output-format)
-- [与 python-expert 的对比 / Comparison with python-expert](#与-python-expert-的对比--comparison-with-python-expert)
 - [参考链接 / References](#参考链接--references)
 - [许可 / License](#许可--license)
 
