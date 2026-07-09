@@ -119,14 +119,6 @@ bash scripts/run-sanitizers.sh src/main.cpp
 ## Issue Count + Recommendation
 ```
 
-
-## 设计文档
-
-完整的规格说明和实现计划见：
-
-- [设计文档](docs/superpowers/specs/2026-07-09-cpp-expert-skill-design.md)
-- [实施计划](docs/superpowers/plans/2026-07-09-cpp-expert-implementation.md)
-
 ## 参考链接
 
 - [cppreference.com](https://en.cppreference.com/)
