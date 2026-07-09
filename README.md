@@ -1,36 +1,45 @@
-cpp-expert
-C/C++ 代码审查技能 — 基于 6 维度优先级规则的自动化代码质量检查，集成 clang-tidy / cppcheck / AddressSanitizer 工具链。
-A C/C++ code review skill — automated quality checks based on 6 priority-ranked rule dimensions, integrating clang-tidy / cppcheck / AddressSanitizer toolchains.
-灵感来自 python-expert，专为 C/C++ 内存安全、未定义行为、资源管理、并发安全、现代 C++ 实践和代码风格审查设计。
-Inspired by python-expert, designed specifically for C/C++ memory safety, undefined behavior, resource management, concurrency safety, modern C++ practices, and code style review.
-目录 / Table of Contents
-快速开始 / Quick Start
-技能结构 / Skill Structure
-规则体系 / Rule System
-工作流程 / Workflow
-工具脚本 / Tool Scripts
-代码审查输出格式 / Review Output Format
-与 python-expert 的对比 / Comparison with python-expert
-参考链接 / References
-许可 / License
-快速开始 / Quick Start
-安装 / Installation
+# cpp-expert
+**C/C++ 代码审查技能 — 基于 6 维度优先级规则的自动化代码质量检查，集成 clang-tidy / cppcheck / AddressSanitizer 工具链。**
+**A C/C++ code review skill — automated quality checks based on 6 priority-ranked rule dimensions, integrating clang-tidy / cppcheck / AddressSanitizer toolchains.**
+> 灵感来自 [python-expert](https://skills.sh/)，专为 C/C++ 内存安全、未定义行为、资源管理、并发安全、现代 C++ 实践和代码风格审查设计。
+>
+> Inspired by [python-expert](https://skills.sh/), designed specifically for C/C++ memory safety, undefined behavior, resource management, concurrency safety, modern C++ practices, and code style review.
+---
+## 目录 / Table of Contents
+- [快速开始 / Quick Start](#快速开始--quick-start)
+- [技能结构 / Skill Structure](#技能结构--skill-structure)
+- [规则体系 / Rule System](#规则体系--rule-system)
+- [工作流程 / Workflow](#工作流程--workflow)
+- [工具脚本 / Tool Scripts](#工具脚本--tool-scripts)
+- [代码审查输出格式 / Review Output Format](#代码审查输出格式--review-output-format)
+- [与 python-expert 的对比 / Comparison with python-expert](#与-python-expert-的对比--comparison-with-python-expert)
+- [参考链接 / References](#参考链接--references)
+- [许可 / License](#许可--license)
+---
+## 快速开始 / Quick Start
+### 安装 / Installation
+```bash
 # 方式一：通过 skills CLI（推荐）
 # Option 1: Via skills CLI (recommended)
 npx skills add WingedFin1251/cpp-expert
 # 方式二：手动复制到项目
 # Option 2: Manually copy into your project
 cp -r cpp-expert <your-project>/.agents/skills/
-使用 / Usage
+```
+### 使用 / Usage
 在 Claude Code 中，当你的问题涉及 C/C++ 代码时，技能会自动触发。你也可以直接要求：
 In Claude Code, the skill triggers automatically when your question involves C/C++ code. You can also explicitly ask:
+```
 审查这段 C++ 代码的内存安全性
 Review this C++ code for memory safety
 帮我检查有没有未定义行为
 Check if there's any undefined behavior
 运行静态分析脚本检查这个文件
 Run the static analysis script on this file
-技能结构 / Skill Structure
+```
+---
+## 技能结构 / Skill Structure
+```
 cpp-expert/
 ├── SKILL.md                    # 入口：触发条件 + Rule 0 + 10步工作流
 │                               # Entry: triggers + Rule 0 + 10-step workflow
@@ -48,20 +57,25 @@ cpp-expert/
     │                           # clang-tidy + cppcheck automation
     └── run-sanitizers.sh       # AddressSanitizer + UBSan 运行脚本
                                 # AddressSanitizer + UBSan runner
-规则体系 / Rule System
+```
+---
+## 规则体系 / Rule System
 6 个检查维度按优先级排列 / Six review dimensions ordered by priority:
-优先级 / Priority	维度 / Dimension	关键检查项 / Key Checks	
-🔴 CRITICAL	内存安全 / Memory Safety	智能指针 vs 裸指针、悬空引用、缓冲区溢出、内存泄漏、UAF / Smart vs raw pointers, dangling refs, buffer overflow, leaks, UAF	
-🔴 CRITICAL	UB & 编译 / UB & Compilation	整数溢出、未初始化变量、strict aliasing、虚析构、ODR / Integer overflow, uninit vars, strict aliasing, virtual dtor, ODR	
-🟠 HIGH	RAII & 资源 / RAII & Resources	Rule of Five、异常安全、vector vs 数组、OS 资源封装 / Rule of Five, exception safety, vector vs arrays, OS resource wrappers	
-🟠 HIGH	并发安全 / Concurrency Safety	数据竞争、锁顺序、死锁、atomic、条件变量 / Data races, lock ordering, deadlock, atomic, condition variables	
-🟡 MEDIUM	现代 C++ / Modern C++	auto、constexpr、nullptr、override、enum class、[[nodiscard]]	
-🟡 MEDIUM	代码风格 / Code Style	命名规范、头文件组织、include 顺序、const 正确性 / Naming, header organization, include order, const correctness	
-Rule 0：语言识别（元规则） / Rule 0: Language Identification (Meta-Rule)
+| 优先级 / Priority | 维度 / Dimension | 关键检查项 / Key Checks |
+|--------|------|-----------|
+| 🔴 **CRITICAL** | 内存安全 / Memory Safety | 智能指针 vs 裸指针、悬空引用、缓冲区溢出、内存泄漏、UAF / Smart vs raw pointers, dangling refs, buffer overflow, leaks, UAF |
+| 🔴 **CRITICAL** | UB & 编译 / UB & Compilation | 整数溢出、未初始化变量、strict aliasing、虚析构、ODR / Integer overflow, uninit vars, strict aliasing, virtual dtor, ODR |
+| 🟠 **HIGH** | RAII & 资源 / RAII & Resources | Rule of Five、异常安全、vector vs 数组、OS 资源封装 / Rule of Five, exception safety, vector vs arrays, OS resource wrappers |
+| 🟠 **HIGH** | 并发安全 / Concurrency Safety | 数据竞争、锁顺序、死锁、atomic、条件变量 / Data races, lock ordering, deadlock, atomic, condition variables |
+| 🟡 **MEDIUM** | 现代 C++ / Modern C++ | auto、constexpr、nullptr、override、enum class、`[[nodiscard]]` |
+| 🟡 **MEDIUM** | 代码风格 / Code Style | 命名规范、头文件组织、include 顺序、const 正确性 / Naming, header organization, include order, const correctness |
+### Rule 0：语言识别（元规则） / Rule 0: Language Identification (Meta-Rule)
 自动识别 C 还是 C++ 代码，根据扩展名、关键语法和标准库。如果是纯 C 代码，跳过"现代 C++"维度并调整内存安全建议。
 Automatically identifies whether the code is C or C++ based on file extension, key syntax constructs, and standard libraries. For pure C code, the "Modern C++" dimension is skipped and memory safety advice is adjusted accordingly.
-工作流程 / Workflow
+---
+## 工作流程 / Workflow
 当技能触发时，AI 依次执行 / When the skill triggers, the AI executes in sequence:
+```
 1. 语言检测 / Language detection
    → 2. 编译验证 / Compilation check (-fsyntax-only)
 3. 内存安全审查 / Memory safety review
@@ -72,21 +86,30 @@ Automatically identifies whether the code is C or C++ based on file extension, k
    → 8. 风格审查 / Style review
 9. 运行工具脚本 / Run tool scripts
    → 10. 生成结构化报告 / Generate structured report
-工具脚本 / Tool Scripts
-run-static-analysis.sh
+```
+---
+## 工具脚本 / Tool Scripts
+### `run-static-analysis.sh`
 对指定 C/C++ 源文件运行 clang-tidy + cppcheck / Runs clang-tidy + cppcheck on the specified C/C++ source file.
+```bash
 bash scripts/run-static-analysis.sh src/main.cpp
-自动探测 compile_commands.json（CMake 生成的编译数据库），缺失时降级运行并给出警告。
-Automatically probes for compile_commands.json (the compilation database generated by CMake), falling back to a degraded run with a warning when it's missing.
-run-sanitizers.sh
+```
+自动探测 `compile_commands.json`（CMake 生成的编译数据库），缺失时降级运行并给出警告。
+Automatically probes for `compile_commands.json` (the compilation database generated by CMake), falling back to a degraded run with a warning when it's missing.
+### `run-sanitizers.sh`
 使用 AddressSanitizer + UndefinedBehaviorSanitizer 编译并运行 / Compiles and runs with AddressSanitizer + UndefinedBehaviorSanitizer.
+```bash
 bash scripts/run-sanitizers.sh src/main.cpp
-自动识别 C 还是 C++（根据扩展名），自动切换 gcc/g++ 和对应的 -std= 标准。
-Automatically detects C vs C++ (by file extension) and switches between gcc/g++ and the corresponding -std= standard.
-⚠️ 安全警告 / Security Warning：该脚本会编译并执行用户提供的代码。请在沙盒或容器中运行不可信的代码。
-This script compiles and executes user-provided code. Run untrusted code in a sandbox or container.
-代码审查输出格式 / Review Output Format
+```
+自动识别 C 还是 C++（根据扩展名），自动切换 `gcc`/`g++` 和对应的 `-std=` 标准。
+Automatically detects C vs C++ (by file extension) and switches between `gcc`/`g++` and the corresponding `-std=` standard.
+> ⚠️ **安全警告 / Security Warning**：该脚本会编译并执行用户提供的代码。请在沙盒或容器中运行不可信的代码。
+>
+> This script compiles and executes user-provided code. Run untrusted code in a sandbox or container.
+---
+## 代码审查输出格式 / Review Output Format
 审查结果按优先级分三区，附工具输出 / Results are organized into three priority tiers with tool output appended:
+```
 ## Summary
 - 代码总体评价 / Overall assessment of the code
 ## Critical Issues 🔴
@@ -103,28 +126,24 @@ This script compiles and executes user-provided code. Run untrusted code in a sa
 - Static Analysis (clang-tidy + cppcheck)
 - Sanitizer (ASan/UBSan) — if run
 ## Issue Count + Recommendation
-与 python-expert 的对比 / Comparison with python-expert
-维度 / Aspect	python-expert	cpp-expert	
-规则数量 / Rule count	8 条 / 8 rules	28 个子规则 / 28 sub-rules	
-工具集成 / Tool integration	无 / None	clang-tidy + cppcheck + ASan/UBSan	
-按需加载 / Lazy loading	全部内联 / All inline	3 层渐进式 / 3-tier progressive (SKILL→AGENTS→references)	
-语言识别 / Language detection	无 / None	Rule 0 元规则（C vs C++）/ Rule 0 meta-rule (C vs C++)	
-代码示例 / Code examples	✅ ❌/✅ 对比 / ❌/✅ pairs	✅ ❌/✅ 对比 + 编译验证 / ❌/✅ pairs + compile-verified	
-审查报告 / Review report	纯文档 / Plain doc	含工具输出区 / Includes tool output section	
-参考链接 / References
-cppreference.com
-C++ Core Guidelines
-SEI CERT C++ Coding Standard
-Clang-Tidy Docs
-Cppcheck Manual
-AddressSanitizer
-Claude Code Skills 文档 / Claude Code Skills Docs
-skills.sh 技能市场 / skills.sh Marketplace
-许可 / License
+```
+## 参考链接 / References
+- [cppreference.com](https://en.cppreference.com/)
+- [C++ Core Guidelines](https://isocpp.github.io/CppCoreGuidelines/)
+- [SEI CERT C++ Coding Standard](https://wiki.sei.cmu.edu/confluence/pages/viewpage.action?pageId=88046682)
+- [Clang-Tidy Docs](https://clang.llvm.org/extra/clang-tidy/)
+- [Cppcheck Manual](https://cppcheck.sourceforge.io/manual.pdf)
+- [AddressSanitizer](https://clang.llvm.org/docs/AddressSanitizer.html)
+- [Claude Code Skills 文档 / Claude Code Skills Docs](https://docs.anthropic.com/en/docs/claude-code/skills)
+- [skills.sh 技能市场 / skills.sh Marketplace](https://skills.sh/)
+---
+## 许可 / License
 MIT
+---
 <details>
 <summary>🌐 语言切换 / Language Switcher</summary>
-中文 / Chinese — 你正在阅读双语版本 / You are reading the bilingual version
-English — 此 README 为中英双语对照 / This README is bilingual (Chinese-English parallel)
+- **中文 / Chinese** — 你正在阅读双语版本 / You are reading the bilingual version
+- **English** — 此 README 为中英双语对照 / This README is bilingual (Chinese-English parallel)
 </details>
-以上即为 cpp-expert README 的中英双语版本。该版本采用段落级对照结构（中文在前、英文紧随其后），而非维护两份独立文件，这样既能同时服务中英文读者，又避免了双文件长期更新不同步的风险。所有代码块、表格、命令和链接均原样保留，仅在自然语言描述处提供双语对照。
+---
+以上即为 `cpp-expert` README 的中英双语版本。该版本采用**段落级对照**结构（中文在前、英文紧随其后），而非维护两份独立文件，这样既能同时服务中英文读者，又避免了双文件长期更新不同步的风险。所有代码块、表格、命令和链接均原样保留，仅在自然语言描述处提供双语对照。
