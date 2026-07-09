@@ -174,14 +174,14 @@ Automatically detects C vs C++ (by file extension) and switches between `gcc`/`g
 
 
 ## 参考链接 / References
-- [cppreference.com](https://en.cppreference.com/) — C/C++ 语言与标准库官方参考
-- [C++ Core Guidelines](https://isocpp.github.io/CppCoreGuidelines/) — C++ 核心设计准则
-- [SEI CERT C++ Coding Standard](https://wiki.sei.cmu.edu/confluence/pages/viewpage.action?pageId=88046682) — CERT 安全编码标准
-- [Clang-Tidy Docs](https://clang.llvm.org/extra/clang-tidy/) — clang-tidy 官方使用文档
-- [Cppcheck Manual](https://cppcheck.sourceforge.io/manual.pdf) — 
-- [AddressSanitizer](https://clang.llvm.org/docs/AddressSanitizer.html) — 内存错误检测工具官方文档
-- [Claude Code Skills 文档 / Claude Code Skills Docs](https://docs.anthropic.com/en/docs/claude-code/skills) — 
-- [skills.sh 技能市场 / skills.sh Marketplace](https://skills.sh/) — Open Agent Skills 生态平台
+- [cppreference.com](https://en.cppreference.com/) 
+- [C++ Core Guidelines](https://isocpp.github.io/CppCoreGuidelines/) 
+- [SEI CERT C++ Coding Standard](https://wiki.sei.cmu.edu/confluence/pages/viewpage.action?pageId=88046682) 
+- [Clang-Tidy Docs](https://clang.llvm.org/extra/clang-tidy/) 
+- [Cppcheck Manual](https://cppcheck.sourceforge.io/manual.pdf) 
+- [AddressSanitizer](https://clang.llvm.org/docs/AddressSanitizer.html) 
+- [Claude Code Skills 文档 / Claude Code Skills Docs](https://docs.anthropic.com/en/docs/claude-code/skills) 
+- [skills.sh 技能市场 / skills.sh Marketplace](https://skills.sh/) 
 
 ---
 
