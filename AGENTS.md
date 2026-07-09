@@ -1,0 +1,797 @@
+# C/C++ Expert Guidelines
+
+**A comprehensive guide for AI agents reviewing C/C++ code**, organized by priority and impact.
+
+---
+
+## Table of Contents
+
+### Language Detection — **MANDATORY**
+0. [Language Identification](#rule-0-language-identification)
+
+### Correctness — **CRITICAL**
+1. [Memory Safety](#1-memory-safety)
+2. [Undefined Behavior & Compilation](#2-undefined-behavior--compilation)
+
+### Resource & Concurrency — **HIGH**
+3. [RAII & Resource Management](#3-raii--resource-management)
+4. [Concurrency Safety](#4-concurrency-safety)
+
+### Style & Modern Practices — **MEDIUM**
+5. [Modern C++ Best Practices](#5-modern-c-best-practices)
+6. [Code Style & Organization](#6-code-style--organization)
+
+---
+
+## Rule 0: Language Identification
+
+**Impact: MANDATORY | Category: meta | Tags:** c-vs-cpp, language-detection
+
+Before applying any rules, identify the language using file extension and code constructs.
+
+| Heuristic | C | C++ |
+|-----------|---|-----|
+| File extension | `.c`, `.h` | `.cpp`, `.hpp`, `.cc`, `.cxx`, `.hh` |
+| Key constructs | `malloc`/`free`, plain `struct` | `class`, `template`, `namespace`, `std::` |
+| Standard libs | `<stdio.h>`, `<stdlib.h>` | `<iostream>`, `<vector>`, `<memory>` |
+
+**If C code:** Skip section 5 (Modern C++). Use `free()`+NULL instead of smart pointers. Keep UB, resource management, concurrency, and style rules.
+
+**If C++ code:** Apply all sections fully.
+
+## 1. Memory Safety
+
+**Impact: CRITICAL | Category: memory-safety | Tags:** pointers, leaks, buffer-overflow
+
+### Why This Matters
+Memory bugs are the #1 cause of security vulnerabilities in C/C++. Use-after-free,
+buffer overflows, and double-free lead to exploitable crashes and data corruption.
+
+### 1.1 Prefer Smart Pointers Over Raw Ownership
+
+#### ❌ Incorrect
+
+```cpp
+void process() {
+    Widget* w = new Widget();
+    w->doWork();
+    delete w;  // Not exception-safe — leaks if doWork() throws
+}
+```
+
+#### ✅ Correct
+
+```cpp
+#include <memory>
+
+void process() {
+    auto w = std::make_unique<Widget>();
+    w->doWork();
+}  // Automatically deleted, exception-safe
+```
+
+### 1.2 Use `make_unique` / `make_shared` Over `new` / `delete`
+
+#### ❌ Incorrect
+
+```cpp
+auto p = std::shared_ptr<Widget>(new Widget);
+// Separate allocation + construction — leak between new and shared_ptr ctor
+```
+
+#### ✅ Correct
+
+```cpp
+auto p = std::make_shared<Widget>();  // Single allocation, exception-safe
+```
+
+### 1.3 Avoid Dangling Pointers and References
+
+#### ❌ Incorrect
+
+```cpp
+int* get_data() {
+    int local = 42;
+    return &local;  // BUG: returning reference to stack variable
+}
+```
+
+#### ✅ Correct
+
+```cpp
+int* get_data() {
+    auto p = std::make_unique<int>(42);
+    return p.release();  // Transfer ownership (caller must delete)
+}
+
+// Better: return by value
+int get_data_value() {
+    return 42;
+}
+```
+
+### 1.4 For C Code: Nullify Freed Pointers
+
+#### ❌ Incorrect
+
+```c
+#include <stdlib.h>
+
+void process() {
+    int* p = malloc(sizeof(int) * 10);
+    free(p);
+    // p is now dangling
+    if (p) {        // Useless check — free() doesn't set p to NULL
+        p[0] = 1;   // Use-after-free!
+    }
+}
+```
+
+#### ✅ Correct
+
+```c
+#include <stdlib.h>
+
+void process() {
+    int* p = malloc(sizeof(int) * 10);
+    free(p);
+    p = NULL;  // Prevents accidental reuse
+}
+```
+
+## 2. Undefined Behavior & Compilation
+
+**Impact: CRITICAL | Category: ub-compilation | Tags:** ub, overflow, aliasing, odr
+
+### Why This Matters
+Undefined behavior means the compiler can generate ANY code — including code that
+appears to work until the worst possible moment. These bugs are notoriously hard
+to debug.
+
+### 2.1 Avoid Signed Integer Overflow
+
+#### ❌ Incorrect
+
+```cpp
+int multiply(int a, int b) {
+    return a * b;  // UB if overflow occurs
+}
+```
+
+#### ✅ Correct
+
+```cpp
+#include <limits>
+
+bool multiply_safe(int a, int b, int& result) {
+    if (a > 0 && b > 0 && a > std::numeric_limits<int>::max() / b)
+        return false;  // Would overflow
+    result = a * b;
+    return true;
+}
+```
+
+### 2.2 Initialize All Variables
+
+#### ❌ Incorrect
+
+```cpp
+int count;
+// ... some code ...
+if (condition) count = 10;
+use(count);  // UB if condition was false — count is uninitialized
+```
+
+#### ✅ Correct
+
+```cpp
+int count = 0;  // Always initialize
+if (condition) count = 10;
+use(count);
+```
+
+### 2.3 Mark Destructors `virtual` in Base Classes
+
+#### ❌ Incorrect
+
+```cpp
+class Base {
+    ~Base() {}  // Non-virtual — deleting Derived through Base* is UB
+};
+
+class Derived : public Base {
+    int* data;
+};
+```
+
+#### ✅ Correct
+
+```cpp
+class Base {
+    virtual ~Base() = default;  // Virtual destructor
+};
+
+class Derived : public Base {
+    std::unique_ptr<int> data;
+};
+```
+
+### 2.4 Avoid Strict Aliasing Violations
+
+#### ❌ Incorrect
+
+```cpp
+float f = 3.14f;
+int* i = reinterpret_cast<int*>(&f);  // UB — dereferencing aliases different types
+```
+
+#### ✅ Correct
+
+```cpp
+float f = 3.14f;
+int i;
+memcpy(&i, &f, sizeof(f));  // OK — memcpy is the legal way to re-interpret bytes
+```
+
+### 2.5 No Throwing From Destructors
+
+#### ❌ Incorrect
+
+```cpp
+class Resource {
+    ~Resource() {
+        cleanup();  // May throw — terminates if stack is unwinding
+    }
+};
+```
+
+#### ✅ Correct
+
+```cpp
+void cleanup();  // Forward declaration
+
+class Resource {
+    ~Resource() noexcept {
+        try {
+            cleanup();
+        } catch (...) {
+            // Log and swallow — destructors must not throw
+        }
+    }
+};
+```
+
+## 3. RAII & Resource Management
+
+**Impact: HIGH | Category: raii-resource | Tags:** raii, rule-of-five, cleanup, exception-safety
+
+### Why This Matters
+RAII (Resource Acquisition Is Initialization) is the cornerstone of C++ resource
+management. Every resource (memory, file handle, mutex, socket) should be owned
+by a stack-allocated object whose destructor releases it.
+
+### 3.1 Follow the Rule of Five
+
+If a class defines any of: destructor, copy constructor, copy assignment, move
+constructor, or move assignment — define all five (or =default/=delete them).
+
+#### ❌ Incorrect
+
+```cpp
+#include <cstddef>
+
+class Buffer {
+    int* data;
+    std::size_t size;
+public:
+    Buffer(std::size_t n) : data(new int[n]), size(n) {}
+    ~Buffer() { delete[] data; }
+    // Missing copy/move — compiler-generated shallow copy leads to double-free!
+};
+```
+
+#### ✅ Correct
+
+```cpp
+class Buffer {
+    std::vector<int> data;  // Let vector handle Rule of Five
+public:
+    explicit Buffer(size_t n) : data(n) {}
+};
+
+// Or if manual management is truly needed:
+class Buffer {
+    std::unique_ptr<int[]> data;
+    size_t size;
+public:
+    Buffer(size_t n) : data(std::make_unique<int[]>(n)), size(n) {}
+    // unique_ptr = move-only, Rule of Five handled automatically
+};
+```
+
+### 3.2 Prefer `std::vector` Over Raw Arrays
+
+#### ❌ Incorrect
+
+```cpp
+int* arr = new int[n];
+// Manual bounds tracking, manual delete[]
+```
+
+#### ✅ Correct
+
+```cpp
+std::vector<int> vec(n);  // Automatic bounds, automatic cleanup
+vec.push_back(42);         // Can grow
+```
+
+### 3.3 Use RAII Wrappers for All OS Resources
+
+#### ❌ Incorrect
+
+```cpp
+void write_log(const char* msg) {
+    FILE* f = fopen("log.txt", "a");
+    if (!f) return;
+    fprintf(f, "%s\n", msg);
+    fclose(f);  // Leaks if fprintf throws (it won't in C, but in C++...)
+}
+```
+
+#### ✅ Correct
+
+```cpp
+void write_log(const std::string& msg) {
+    std::ofstream f("log.txt", std::ios::app);
+    if (!f) return;
+    f << msg << std::endl;
+    // Automatically closed when f goes out of scope
+}
+```
+
+### 3.4 Exception Safety Guarantees
+
+#### ❌ Incorrect
+
+```cpp
+void process_data(Container& c) {
+    c.reserve(c.size() + 10);
+    // If next line throws, c is left in modified state with no rollback
+    modify_elements(c);
+}
+```
+
+#### ✅ Correct
+
+```cpp
+void process_data(Container& c) {
+    auto snapshot = c;              // Copy original
+    c.reserve(c.size() + 10);
+    try {
+        modify_elements(c);
+    } catch (...) {
+        c = std::move(snapshot);    // Rollback on failure (strong guarantee)
+        throw;
+    }
+}
+```
+
+## 4. Concurrency Safety
+
+**Impact: HIGH | Category: concurrency | Tags:** threads, mutex, data-race, deadlock
+
+### Why This Matters
+Data races are undefined behavior in C++. The compiler and hardware can reorder
+operations in ways that break unsynchronized concurrent access, leading to
+impossible-to-reproduce bugs.
+
+### 4.1 Use `std::scoped_lock` for Multiple Mutexes
+
+#### ❌ Incorrect
+
+```cpp
+void transfer(Account& from, Account& to, int amount) {
+    std::lock_guard<std::mutex> lk1(from.mtx);
+    std::lock_guard<std::mutex> lk2(to.mtx);
+    // DEADLOCK if another thread calls transfer(to, from) simultaneously
+    from.balance -= amount;
+    to.balance += amount;
+}
+```
+
+#### ✅ Correct
+
+```cpp
+void transfer(Account& from, Account& to, int amount) {
+    std::scoped_lock lk(from.mtx, to.mtx);  // Lock both with deadlock avoidance
+    from.balance -= amount;
+    to.balance += amount;
+}
+```
+
+### 4.2 Avoid Locking Where Not Needed — Use `std::atomic`
+
+#### ❌ Incorrect
+
+```cpp
+int counter;
+std::mutex mtx;
+
+void increment() {
+    std::lock_guard lk(mtx);
+    ++counter;  // Heavyweight — mutex for a single int
+}
+```
+
+#### ✅ Correct
+
+```cpp
+std::atomic<int> counter{0};
+
+void increment() {
+    ++counter;  // Lock-free on most platforms
+}
+```
+
+### 4.3 Thread-Safe Initialization
+
+#### ❌ Incorrect
+
+```cpp
+static std::shared_ptr<Config> config;
+std::shared_ptr<Config> get_config() {
+    if (!config) {
+        config = std::make_shared<Config>();  // Double-checked locking bug!
+    }
+    return config;
+}
+```
+
+#### ✅ Correct
+
+```cpp
+Config& get_config() {
+    static Config config;  // Function-local static — thread-safe in C++11+
+    return config;
+}
+
+// Or:
+std::once_flag flag;
+std::unique_ptr<Config> config;
+
+void init_config() {
+    std::call_once(flag, []() {
+        config = std::make_unique<Config>();
+    });
+}
+```
+
+### 4.4 Handle Spurious Wakeups in Condition Variables
+
+#### ❌ Incorrect
+
+```cpp
+std::condition_variable cv;
+std::mutex mtx;
+bool ready = false;
+
+void wait_for_work() {
+    std::unique_lock lk(mtx);
+    cv.wait(lk);  // May return even if ready is still false (spurious wakeup)
+}
+```
+
+#### ✅ Correct
+
+```cpp
+void wait_for_work() {
+    std::unique_lock lk(mtx);
+    cv.wait(lk, []{ return ready; });  // Predicate handles spurious wakeups
+}
+```
+
+## 5. Modern C++ Best Practices
+
+**Impact: MEDIUM | Category: modern-cpp | Tags:** cpp11, cpp14, cpp17, cpp20
+
+### Why This Matters
+Modern C++ (C++11 and later) provides safer, clearer, and often faster alternatives
+to older idioms. Migrating to modern constructs reduces bugs and improves readability.
+
+### 5.1 Prefer `auto` for Type Deduction
+
+#### ❌ Incorrect
+
+```cpp
+std::vector<std::pair<int, std::string>>::const_iterator it = v.begin();
+```
+
+#### ✅ Correct
+
+```cpp
+auto it = v.cbegin();  // Clear, concise, and always correct
+```
+
+### 5.2 Use `nullptr` Instead of `NULL` or `0`
+
+#### ❌ Incorrect
+
+```cpp
+void* ptr = NULL;
+void* ptr2 = 0;
+```
+
+#### ✅ Correct
+
+```cpp
+void* ptr = nullptr;  // Type-safe, unambiguous
+```
+
+### 5.3 Use `override` on All Overridden Virtual Functions
+
+#### ❌ Incorrect
+
+```cpp
+class Derived : public Base {
+    void doSomething();  // Is this overriding or hiding? Unclear.
+};
+```
+
+#### ✅ Correct
+
+```cpp
+class Derived : public Base {
+    void doSomething() override;  // Compiler will error if nothing to override
+};
+```
+
+### 5.4 Use `enum class` Over Plain `enum`
+
+#### ❌ Incorrect
+
+```cpp
+enum Color { RED, GREEN, BLUE };
+enum Fruit { APPLE, BANANA };
+// RED and APPLE are in the same scope! Conflict!
+```
+
+#### ✅ Correct
+
+```cpp
+enum class Color { RED, GREEN, BLUE };
+enum class Fruit { APPLE, BANANA };
+// Scoped: Color::RED, Fruit::APPLE — no conflicts
+```
+
+### 5.5 Use `constexpr` for Compile-Time Values
+
+#### ❌ Incorrect
+
+```cpp
+int array_size = 100;  // Runtime variable — not usable in template params
+```
+
+#### ✅ Correct
+
+```cpp
+constexpr int array_size = 100;  // Compile-time constant
+std::array<int, array_size> data;  // OK
+```
+
+### 5.6 Use `[[nodiscard]]` to Prevent Ignoring Return Values
+
+#### ❌ Incorrect
+
+```cpp
+int compute_result();
+// Caller can accidentally ignore:
+compute_result();  // Return value discarded silently
+```
+
+#### ✅ Correct
+
+```cpp
+[[nodiscard]] int compute_result();
+// Compiler warns: "discarding return value of 'nodiscard' function"
+```
+
+## 6. Code Style & Organization
+
+**Impact: MEDIUM | Category: style | Tags:** naming, headers, const, formatting
+
+### Why This Matters
+Consistent style reduces cognitive overhead, makes code review faster, and
+prevents trivial style debates from blocking meaningful technical discussion.
+
+### 6.1 Naming Conventions
+
+#### ❌ Incorrect
+
+```cpp
+class user_account {
+    int ID;
+    string GetName() { ... }
+};
+
+int calc_value(int x) {
+    return x * 2;
+}
+```
+
+#### ✅ Correct
+
+```cpp
+class UserAccount {  // PascalCase for types
+    int id_;          // snake_case with trailing _ for member variables (Google style)
+public:
+    std::string GetName() const { ... }  // PascalCase methods or snake_case — be consistent
+};
+
+int calculate_value(int x) {  // snake_case for functions
+    return x * 2;
+}
+```
+
+### 6.2 Include Order
+
+#### ❌ Incorrect
+
+```cpp
+#include <vector>
+#include "my_header.h"
+#include <iostream>
+#include <algorithm>
+```
+
+#### ✅ Correct
+
+```cpp
+#include "my_header.h"     // 1. Own header (catches missing includes early)
+#include <algorithm>        // 2. Standard library
+#include <iostream>
+#include <vector>
+#include "project/utils.h"  // 3. Project headers
+```
+
+### 6.3 Header Guards
+
+#### ❌ Incorrect
+
+```cpp
+// my_header.h — no guard! Will cause redefinition errors
+```
+
+#### ✅ Correct
+
+```cpp
+#pragma once  // Simple, modern — supported by all major compilers
+
+// Or traditional:
+#ifndef MY_HEADER_H_
+#define MY_HEADER_H_
+// ...
+#endif
+```
+
+### 6.4 Const Correctness
+
+#### ❌ Incorrect
+
+```cpp
+std::string get_name(/* should be const ref */ User& u) {
+    return u.name_;
+}
+
+void print_data(/* should be const */ std::vector<int>& data) {
+    for (auto x : data) std::cout << x;
+}
+```
+
+#### ✅ Correct
+
+```cpp
+std::string get_name(const User& u) {  // Const-ref: no copy, no mutation
+    return u.name_;
+}
+
+void print_data(const std::vector<int>& data) {  // Read-only guaranteed
+    for (auto x : data) std::cout << x;
+}
+```
+
+### 6.5 Header-Source Separation
+
+#### ❌ Incorrect
+
+```cpp
+// my_class.h
+#include <iostream>
+using namespace std;  // Pollutes namespace of every file that includes this
+
+class MyClass {
+    void doSomething();  // Implementation in header — OK for inline, but...
+};
+```
+
+#### ✅ Correct
+
+```cpp
+// my_class.h — declarations only
+class MyClass {
+    void doSomething();
+};
+
+// my_class.cpp — implementations
+#include "my_class.h"
+void MyClass::doSomething() {
+    // implementation
+}
+```
+
+---
+
+## Code Review Report Format
+
+When reviewing C/C++ code, structure your output as:
+
+```markdown
+## Summary
+[Brief overview of the code and main issues found]
+
+## Critical Issues 🔴
+
+### 1. [Issue Title]
+**File:** `path/to/file.cpp:42`
+**Issue:** [Description of the problem]
+**Impact:** [Why this matters — e.g., "use-after-free leads to exploitable crash"]
+**Fix:**
+```cpp
+// Corrected code
+```
+
+## High Priority 🟠
+
+### 1. [Issue Title]
+...
+
+## Medium Priority 🟡
+
+...
+
+## Tool Results
+### Syntax Check (`g++ -fsyntax-only`)
+```
+[compiler output if run]
+```
+### Static Analysis (clang-tidy + cppcheck)
+```
+[script output]
+```
+### Sanitizer (ASan/UBSan) — if run
+```
+[script output]
+```
+
+## Issue Count
+- 🔴 CRITICAL: N
+- 🟠 HIGH: N
+- 🟡 MEDIUM: N
+
+**Recommendation:** [Overall assessment and next steps]
+```
+
+## Quick Reference
+
+### Priority Matrix
+
+| Level | Description | Examples | Action |
+|-------|-------------|----------|--------|
+| **CRITICAL** | Memory corruption, UB, security | Use-after-free, overflow, deadlock | Fix immediately |
+| **HIGH** | Resource leaks, correctness risk | Missing Rule of Five, data race | Fix before merge |
+| **MEDIUM** | Style, modern idioms | Missing override, `NULL` vs `nullptr` | Fix or accept |
+
+### References
+
+- [cppreference.com](https://en.cppreference.com/)
+- [C++ Core Guidelines](https://isocpp.github.io/CppCoreGuidelines/)
+- [SEI CERT C++ Coding Standard](https://wiki.sei.cmu.edu/confluence/pages/viewpage.action?pageId=88046682)
