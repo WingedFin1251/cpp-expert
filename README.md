@@ -119,16 +119,6 @@ bash scripts/run-sanitizers.sh src/main.cpp
 ## Issue Count + Recommendation
 ```
 
-## 与 python-expert 的对比
-
-| 维度 | python-expert | cpp-expert |
-|------|--------------|------------|
-| 规则数量 | 8 条 | 28 个子规则 |
-| 工具集成 | 无 | clang-tidy + cppcheck + ASan/UBSan |
-| 按需加载 | 全部内联 | 3 层渐进式（SKILL→AGENTS→references） |
-| 语言识别 | 无 | Rule 0 元规则（C vs C++） |
-| 代码示例 | ✅ ❌/✅ 对比 | ✅ ❌/✅ 对比 + 编译验证 |
-| 审查报告 | 纯文档 | 含工具输出区 |
 
 ## 设计文档
 
