@@ -139,6 +139,51 @@ void process() {
 }
 ```
 
+### 1.5 Track Borrowed Lifetimes
+
+#### ❌ Incorrect
+
+```cpp
+const int* get_data() {
+    static std::vector<int> data = {1, 2, 3};
+    return data.data();  // Caller does not know when this pointer becomes invalid
+}
+
+void process() {
+    const int* ptr = get_data();
+    // If internal operation causes data to reallocate...
+    // ptr is now dangling!
+    use(*ptr);           // Use-after-free
+}
+```
+
+#### ✅ Correct
+
+```cpp
+#include <span>
+
+std::span<const int> get_data() {
+    static std::vector<int> data = {1, 2, 3};
+    return data;  // span carries size and bounds information
+}
+
+void process() {
+    auto view = get_data();
+    use(view[0]);        // span documents the expected lifetime contract
+}
+
+// Even better: return by value
+std::vector<int> get_data_copy() {
+    return {1, 2, 3};    // No lifetime ambiguity
+}
+```
+
+#### Why This Matters
+Returning raw pointers to internally-owned data creates implicit lifetime
+contracts that callers cannot verify. `std::span` documents the intent
+(a non-owning view) and carries size information, reducing the chance of
+buffer overruns and dangling accesses.
+
 ## 2. Undefined Behavior & Compilation
 
 **Impact: CRITICAL | Category: ub-compilation | Tags:** ub, overflow, aliasing, odr
@@ -260,6 +305,40 @@ class Resource {
     }
 };
 ```
+
+
+### 2.6 Watch for C ABI Boundary Violations
+
+#### ❌ Incorrect
+
+```cpp
+// Widget has non-trivial members -- layout is not standard
+struct Widget {
+    std::string name;
+    int id;
+};
+
+extern "C" void process(Widget w);  // UB! Non-standard-layout type across C ABI
+```
+
+#### ✅ Correct
+
+```cpp
+struct WidgetData {
+    char name[64];
+    int id;
+};
+static_assert(std::is_standard_layout_v<WidgetData>, "C ABI requires standard layout");
+
+extern "C" void process(WidgetData d);  // OK -- standard layout type
+```
+
+#### Why This Matters
+C++ types passed through `extern "C"` boundaries must be standard-layout
+(`std::is_standard_layout`). Non-standard-layout types (those with virtual
+functions, non-static members with different access control, or members of
+reference type) have undefined layout, and passing them across C ABI
+boundaries is undefined behavior.
 
 ## 3. RAII & Resource Management
 
