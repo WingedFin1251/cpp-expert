@@ -1,8 +1,8 @@
 # cpp-expert
 
-**C/C++ 代码审查技能 — 基于 6 维度优先级规则的自动化代码质量检查，集成 clang-tidy / cppcheck / AddressSanitizer 工具链。**
+**C/C++ 代码审查技能 — 基于 8 维度优先级规则的自动化代码质量检查，集成 clang-tidy / cppcheck / AddressSanitizer 工具链。**
 
-**A C/C++ code review skill — automated quality checks based on 6 priority-ranked rule dimensions, integrating clang-tidy / cppcheck / AddressSanitizer toolchains.**
+**A C/C++ code review skill — automated quality checks based on 8 priority-ranked rule dimensions, integrating clang-tidy / cppcheck / AddressSanitizer toolchains.**
 
 > 灵感来自 [python-expert](https://skills.sh/)，专为 C/C++ 内存安全、未定义行为、资源管理、并发安全、现代 C++ 实践和代码风格审查设计。
 >
@@ -57,15 +57,15 @@ Run the static analysis script on this file
 cpp-expert/
 ├── SKILL.md                    # 入口：触发条件 + Rule 0 + 10步工作流
 │                               # Entry: triggers + Rule 0 + 10-step workflow
-├── AGENTS.md                   # 完整规则参考：6维度 × ❌/✅ 示例
-│                               # Full rule reference: 6 dimensions × ❌/✅ examples
+├── AGENTS.md                   # 完整规则参考：8维度(含v1.1新增) × ❌/✅ 示例
+│                               # Full rule reference: 8 dimensions (incl. v1.1) × ❌/✅ examples
 ├── references/
 │   ├── memory-safety.md        # 智能指针指南 + 泄漏/溢出/UAF 检查清单
 │   │                           # Smart pointer guide + leak/overflow/UAF checklists
 │   ├── compiler-errors.md      # 常见编译错误速查 + 段错误排查
 │   │                           # Common compile errors quick ref + segfault debugging
-│   └── cpp-modern.md           # C++11/14/17/20 特性对照表 + 迁移路径
-│                               # C++11/14/17/20 feature matrix + migration path
+│   └── cpp-modern.md           # C++11→C++23 特性对照表 + Concepts/Ranges/Coroutines/span/format 深度审查
+│                               # C++11→C++23 feature matrix + deep-dive: Concepts, Ranges, Coroutines, span, format
 └── scripts/
     ├── run-static-analysis.sh  # clang-tidy + cppcheck 自动化脚本
     │                           # clang-tidy + cppcheck automation
@@ -77,12 +77,14 @@ cpp-expert/
 
 ## 规则体系 / Rule System
 
-6 个检查维度按优先级排列 / Six review dimensions ordered by priority:
+8 个检查维度按优先级排列 / Eight review dimensions ordered by priority:
 
 | 优先级 / Priority | 维度 / Dimension | 关键检查项 / Key Checks |
 | :---------------- | :--------------- | :---------------------- |
 | 🔴 **CRITICAL** | 内存安全 / Memory Safety | 智能指针 vs 裸指针、悬空引用、缓冲区溢出、内存泄漏、UAF / Smart vs raw pointers, dangling refs, buffer overflow, leaks, UAF |
 | 🔴 **CRITICAL** | UB & 编译 / UB & Compilation | 整数溢出、未初始化变量、strict aliasing、虚析构、ODR / Integer overflow, uninit vars, strict aliasing, virtual dtor, ODR |
+| 🔴 **CRITICAL** | 借用生命周期 / Borrowed Lifetimes (v1.1) | 返回内部指针的隐式生命周期绑定、std::span 替代裸指针 / Implicit lifetime contracts, std::span over raw ptrs |
+| 🔴 **CRITICAL** | C ABI 边界 / C ABI Contexts (v1.1) | 非标准布局类型过 extern "C"、is_standard_layout 检查 / Non-standard-layout across extern "C" |
 | 🟠 **HIGH** | RAII & 资源 / RAII & Resources | Rule of Five、异常安全、vector vs 数组、OS 资源封装 / Rule of Five, exception safety, vector vs arrays, OS resource wrappers |
 | 🟠 **HIGH** | 并发安全 / Concurrency Safety | 数据竞争、锁顺序、死锁、atomic、条件变量 / Data races, lock ordering, deadlock, atomic, condition variables |
 | 🟡 **MEDIUM** | 现代 C++ / Modern C++ | `auto`、`constexpr`、`nullptr`、`override`、`enum class`、`[[nodiscard]]` |
@@ -182,6 +184,10 @@ Automatically detects C vs C++ (by file extension) and switches between `gcc`/`g
 - [AddressSanitizer](https://clang.llvm.org/docs/AddressSanitizer.html) 
 - [Claude Code Skills 文档 / Claude Code Skills Docs](https://docs.anthropic.com/en/docs/claude-code/skills) 
 - [skills.sh 技能市场 / skills.sh Marketplace](https://skills.sh/) 
+
+### 版本历史 / Version History
+- **v1.1** — 新增 Borrowed Lifetimes 和 C ABI 规则、C++20/23 深度参考（Concepts/Ranges/Coroutines/span/format）、触发词扩展、Review Checklist / Added borrowed lifetimes & C ABI rules, C++20/23 deep reference, trigger expansion, review checklist
+- **v1.0** — 初始版本：8维度规则体系、3 参考文件、2 工具脚本 / Initial release: 8-dimension rule system, 3 reference files, 2 tool scripts
 
 ---
 
