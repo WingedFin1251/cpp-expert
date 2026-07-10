@@ -14,7 +14,7 @@
   - std::format：编译时类型安全格式化
 - 增加 Review Checklist 章节
 
-### 修复（竞品调研后）
+### 修复
 - 修复 AGENTS.md §1.5 示例中 `data` 越域访问问题
 - 修复 references/cpp-modern.md §std::format 示例放在全局作用域的编译错误
 
