@@ -3,8 +3,9 @@ name: cpp-expert
 description: |
   Use when: reviewing C/C++ code for memory safety, undefined behavior, resource leaks,
   concurrency bugs, or style issues; debugging segmentation faults, buffer overflows, double free,
-  or data races; writing new C++ code and following modern best practices (C++11/14/17/20);
-  or when user mentions C, C++, clang-tidy, cppcheck, AddressSanitizer, or static analysis.
+  or data races; writing new C++ code and following modern best practices (C++11/14/17/20/23);
+  or when user mentions C, C++, concept, rvalue, move semantics, smart pointer, RAII,
+  constexpr, clang-tidy, cppcheck, AddressSanitizer, valgrind, or static analysis.
 ---
 
 # C/C++ Expert
@@ -22,6 +23,11 @@ Use this skill when:
 - Migrating from C-style to modern C++ (C++11/14/17/20)
 - Optimizing C/C++ code performance and memory usage
 - Following code style guidelines (naming, headers, const correctness)
+
+**Explicit triggers:** C, C++, C++17, C++20, C++23, smart pointer, unique_ptr,
+shared_ptr, RAII, move semantics, rvalue, template, concept, STL, undefined
+behavior, constexpr, memory, dangling, clang-tidy, cppcheck, AddressSanitizer,
+valgrind, static analysis, code review, memory leak, segfault, buffer overflow
 
 ## ⚙️ Rule 0: Language Identification (Meta-Rule)
 
