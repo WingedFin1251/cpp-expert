@@ -720,6 +720,87 @@ compute_result();  // Return value discarded silently
 // Compiler warns: "discarding return value of 'nodiscard' function"
 ```
 
+### 5.7 Basic C Semantics & Compiler Traps (v1.3)
+
+**Impact: CRITICAL | Category: c-semantics | Tags:** pass-by-value, volatile, array-bounds, variable-shadowing, optimization
+
+#### Why This Matters
+The F1 analysis of 15 real-world embedded bugs showed that **micro-logic
+errors** (pass-by-value, variable shadowing, volatile-omission) are the
+most frequently missed category. They hide in plain sight because macro-
+architecture thinking consumes attention tokens.
+
+#### Mandatory Checks (do NOT skip these)
+
+**1. Function Parameter Pass-by-Value**
+
+```c
+// ❌ CRITICAL: pass-by-value cannot modify the caller's variable
+void normalize(float angle) {
+    if (angle > 360.0f) angle -= 360.0f;  // modifies local copy only!
+}
+
+// ✅ Must use pointer
+void normalize(float *angle) {
+    if (*angle > 360.0f) *angle -= 360.0f;
+}
+```
+
+**2. Empty-Loop Optimization Trap**
+
+```c
+// ❌ BUG: Compiled away at -O2 — optimizer removes the empty body
+for (i = 0; i < 1000; i++);
+
+// ✅ volatile prevents optimization
+for (volatile int i = 0; i < 1000; i++);
+
+// ✅ Or use HAL_Delay / library delay
+HAL_Delay(1);
+```
+
+**3. Array Bounds with Narrow Index Type**
+
+```c
+// ❌ Potential overflow: u8 can only index 0-255
+void process(u8 times, uint8_t *buf) {
+    for (u8 i = 0; i < times; i++) {
+        buf[i] = 0;  // if times > 255: i wraps to 0, infinite loop or overflow
+    }
+}
+
+// ✅ Use matching sizes
+void process(size_t times, uint8_t *buf) {
+    for (size_t i = 0; i < times; i++) {
+        buf[i] = 0;
+    }
+}
+```
+
+**4. Variable Shadowing / Misuse in Sequential Assignments**
+
+```c
+// ❌ BUG: V_err_all accumulates Ierr instead of V_err
+V_err_all = V_err_all + Ierr;  // Should be: V_err_all + V_err
+
+// ❌ BUG: consecutive assignments with subtle copy-paste error
+Ia_ctrl = PID_Calc(&pid_Ia, Ia_fbk);  // correct
+Va_ctrl = PID_Calc(&pid_Ia, Ia_fbk);  // copy-paste: should be Va_fbk!
+```
+
+**5. Redundant `volatile` for Hardware-Register Width**
+
+```c
+// ❌ CRITICAL: compiler may cache reads from peripheral registers
+uint32_t get_status() {
+    while (!(USART1->SR & USART_SR_RXNE));  // SR read may not happen each time!
+    return USART1->DR;
+}
+
+// ✅ Volatile forces re-read on every access
+#define USART1_SR  (*(volatile uint32_t *)USART1_BASE + 0x00)
+```
+
 ## 6. Code Style & Organization
 
 **Impact: MEDIUM | Category: style | Tags:** naming, headers, const, formatting

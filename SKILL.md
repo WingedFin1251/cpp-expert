@@ -47,55 +47,74 @@ Before any review, determine whether the target code is **C** or **C++**:
 
 ## Development Process
 
+### 0. **Two-Stage Deep Review** (v1.3 — MANDATORY)
+Execute **Stage 1** completely, then **Stage 2**. Do NOT mix them — mixing causes
+attention dilution and missed bugs.
+
+---
+
+### STAGE 1: Micro Logic Scan (逐函数语义推演)
+
+**Focus:** Single-file, single-function logic. **No cross-file thinking yet.**
+**Mental model:** You have never seen this code before. Read each function
+top-to-bottom as if executing it line by line.
+
 ### 1. **Language Detection** (MANDATORY)
 Identify C vs C++ via extension and constructs. See Rule 0.
 
-### 1.5 **Execution Path Tracing** (CRITICAL — new)
-Before flagging any conflict (timers, GPIO, interrupts):
+### 2. **Basic C Semantics & Compiler Traps** (🔴 CRITICAL — v1.3)
+Check each function for language-level traps. See AGENTS.md §5.4.
 
-1. Locate `main()` or entry function — scan what init functions are actually called
-2. Build a **call graph**: function A calls B calls C — a function not in this chain is **dead code**
-3. **Dead code rule**: a function never called from any entry point → its internal config cannot conflict with active code. Report at 🟡 MEDIUM max, not 🔴 CRITICAL
-4. Exception: ISR handlers defined in vector table are always "alive" even if not explicitly called in main()
-
-### 2. **Try Compilation** (CRITICAL)
+### 3. **Try Compilation** (CRITICAL)
 Run `gcc` (for C) or `g++` (for C++) with `-fsyntax-only -Wall -Wextra -std=c++20` (or `-std=c11` for C) to catch
 syntax errors early. If compilation fails, load `references/compiler-errors.md`.
 
-### 3. **Check Memory Safety** (🔴 CRITICAL)
+### 4. **Check Memory Safety** (🔴 CRITICAL)
 Smart pointers, dangling references, buffer overflows, memory leaks, use-after-free.
 
-### 4. **Check UB & Compilation** (🔴 CRITICAL)
+### 5. **Check UB & Compilation** (🔴 CRITICAL)
 Uninitialized variables, integer overflow, strict aliasing, missing virtual destructors, ODR.
 
-### 5. **Check RAII & Resources** (🟠 HIGH)
+---
+
+### STAGE 2: Macro Architecture Scan (跨文件系统审查)
+
+**Now** you may think across files — call graphs, pin conflicts, interrupt priorities.
+
+### 6. **Execution Path Tracing** (MANDATORY — v1.2)
+Locate `main()` or entry function. Build call graph. Dead code → 🟡 MEDIUM max.
+Exception: ISR handlers in vector table are always "alive".
+
+### 7. **Check RAII & Resources** (🟠 HIGH)
 Rule of Five, manual resource cleanup, exception safety, raw arrays vs vector.
 
-### 6. **Check Concurrency** (🟠 HIGH)
+### 8. **Check Concurrency** (🟠 HIGH)
 Data races, mutex patterns, lock ordering, atomic usage, thread-safe init.
 
-### 7. **Modern C++ Suggestions** (🟡 MEDIUM — C++ only)
+### 9. **Modern C++ Suggestions** (🟡 MEDIUM — C++ only)
 auto, constexpr, nullptr, override/final, enum class, [[nodiscard]].
 
-### 8. **Style Review** (🟡 MEDIUM)
+### 10. **Style Review** (🟡 MEDIUM)
 Naming, headers, const correctness, comments.
 
-### 9. **Run Tools**
+### 11. **Run Tools**
 Execute `run-static-analysis.sh` and optionally `run-sanitizers.sh`.
 
-### 10. **Generate Report** using the template in AGENTS.md
+### 12. **Generate Report** using the template in AGENTS.md
 
 ## Quick Reference
 
-| Priority | Dimension | Key Checks |
-|----------|-----------|------------|
-| ⚙️ MANDATORY | Execution Path Tracing (v1.2) | Build call graph from main(), dead code → MEDIUM max |
-| 🔴 CRITICAL | Memory Safety | Smart pointers, leaks, buffer overflows, dangling |
-| 🔴 CRITICAL | UB & Compilation | Overflow, aliasing, missing virtual dtor, ODR |
-| 🟠 HIGH | RAII & Resources | Rule of Five, cleanup, exception safety |
-| 🟠 HIGH | Concurrency | Data races, locking, atomics |
-| 🟡 MEDIUM | Modern C++ | auto, constexpr, nullptr, override |
-| 🟡 MEDIUM | Style | Naming, headers, const correctness |
+| Stage | Priority | Dimension | Key Checks |
+|-------|----------|-----------|------------|
+| **1** ⚙️ MANDATORY | — | Language Detection | C vs C++, extensions, std libs |
+| **1** 🔴 CRITICAL | — | C Semantics (v1.3) | Pass-by-value traps, volatile, array bounds, variable shadowing |
+| **1** 🔴 CRITICAL | Memory Safety | Smart pointers, leaks, buffer overflows, dangling |
+| **1** 🔴 CRITICAL | UB & Compilation | Overflow, aliasing, missing virtual dtor, ODR |
+| **2** ⚙️ MANDATORY | Execution Path Tracing | Build call graph from main(), dead code → MEDIUM max |
+| **2** 🟠 HIGH | RAII & Resources | Rule of Five, cleanup, exception safety |
+| **2** 🟠 HIGH | Concurrency | Data races, locking, atomics |
+| **2** 🟡 MEDIUM | Modern C++ | auto, constexpr, nullptr, override |
+| **2** 🟡 MEDIUM | Style | Naming, headers, const correctness |
 
 ## Bundled Resources
 
