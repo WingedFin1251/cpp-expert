@@ -50,6 +50,14 @@ Before any review, determine whether the target code is **C** or **C++**:
 ### 1. **Language Detection** (MANDATORY)
 Identify C vs C++ via extension and constructs. See Rule 0.
 
+### 1.5 **Execution Path Tracing** (CRITICAL — new)
+Before flagging any conflict (timers, GPIO, interrupts):
+
+1. Locate `main()` or entry function — scan what init functions are actually called
+2. Build a **call graph**: function A calls B calls C — a function not in this chain is **dead code**
+3. **Dead code rule**: a function never called from any entry point → its internal config cannot conflict with active code. Report at 🟡 MEDIUM max, not 🔴 CRITICAL
+4. Exception: ISR handlers defined in vector table are always "alive" even if not explicitly called in main()
+
 ### 2. **Try Compilation** (CRITICAL)
 Run `gcc` (for C) or `g++` (for C++) with `-fsyntax-only -Wall -Wextra -std=c++20` (or `-std=c11` for C) to catch
 syntax errors early. If compilation fails, load `references/compiler-errors.md`.
@@ -81,6 +89,7 @@ Execute `run-static-analysis.sh` and optionally `run-sanitizers.sh`.
 
 | Priority | Dimension | Key Checks |
 |----------|-----------|------------|
+| ⚙️ MANDATORY | Execution Path Tracing (v1.2) | Build call graph from main(), dead code → MEDIUM max |
 | 🔴 CRITICAL | Memory Safety | Smart pointers, leaks, buffer overflows, dangling |
 | 🔴 CRITICAL | UB & Compilation | Overflow, aliasing, missing virtual dtor, ODR |
 | 🟠 HIGH | RAII & Resources | Rule of Five, cleanup, exception safety |

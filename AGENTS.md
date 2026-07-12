@@ -340,6 +340,52 @@ functions, non-static members with different access control, or members of
 reference type) have undefined layout, and passing them across C ABI
 boundaries is undefined behavior.
 
+### 2.7 Control Algorithm Continuity (v1.2)
+
+**Impact: MEDIUM | Category: ub-compilation | Tags:** control, math, boundary, continuity
+
+#### Why This Matters
+When reviewing motor control, power conversion, or signal processing code,
+AI often misidentifies **mathematically continuous** piecewise functions
+as "boundary bugs". A sector boundary with `<=` on one side and `<` on the
+other is harmless when the underlying function is continuous at that point.
+
+#### ❌ Incorrect (false positive)
+
+```cpp
+// Misidentified as "boundary discontinuity" — but it IS continuous
+if (theta >= 0.0f && theta <= PI / 3.0f) {
+    t4 = 1.5f * Ur * sinf(PI / 3.0f - theta);
+    // At theta = PI/3: t4 = 1.5*Ur*sin(0) = 0
+} else if (theta <= 2.0f * PI / 3.0f) {
+    t4 = 1.5f * Ur * sinf(theta - PI / 3.0f);
+    // At theta = PI/3: t4 = 1.5*Ur*sin(0) = 0 ✅ continuous
+}
+```
+
+#### ✅ Correct (genuine discontinuity)
+
+```cpp
+// GENUINE discontinuity — denominator changes sign
+if (abs_vd < 1e-6f) {
+    // division by zero imminent → handle separately
+} else {
+    result = vq / vd;  // sign change across threshold
+}
+```
+
+#### Review Rule
+For piecewise math functions (SVPWM, Clark/Park, filters, interpolation):
+
+1. **Continuity test**: evaluate both branches at the boundary point — same result? → no bug
+2. **Domain check**: division by zero, sqrt(negative), log(negative) → genuine 🔴 CRITICAL
+3. **Limit behavior**: if the function is `sin`, `cos`, `tanh`, `exp`, or a polynomial, the
+   boundary condition is almost certainly continuous unless there's a denominator zero
+4. **Report calibration**: flag boundary concerns as 🟡 MEDIUM or lower when continuity
+   can be verified, unless a division/mod/domain error is identified
+
+---
+
 ## 3. RAII & Resource Management
 
 **Impact: HIGH | Category: raii-resource | Tags:** raii, rule-of-five, cleanup, exception-safety
@@ -809,6 +855,66 @@ void MyClass::doSomething() {
 
 ---
 
+### 4.5 Architecture-Specific Atomicity (v1.2)
+
+**Impact: HIGH | Category: concurrency | Tags:** atomic, architecture, arm, cortex-m
+
+#### Why This Matters
+Not all architectures treat unguarded variable access the same. On
+Cortex-M3/M4/M7, 32-bit aligned reads and writes are **single-copy
+atomic**. Flagging every cross-interrupt variable access as 🔴 CRITICAL
+overestimates the risk on these platforms.
+
+#### Architecture Atomicity Table
+
+| Architecture | 32-bit aligned | 64-bit | volatile needed? |
+|-------------|---------------|--------|-----------------|
+| Cortex-M0/M0+ | ❌ Not atomic | ❌ | ✅ yes |
+| **Cortex-M3/M4/M7** | ✅ **Single-copy atomic** | ❌ | ✅ yes for compiler |
+| Cortex-A (generic) | ❌ Depends on cache policy | ❌ | ✅ yes |
+| x86/x64 | ✅ Up to 64-bit | ✅ (if aligned) | ✅ yes for compiler |
+
+#### ❌ Incorrect (over-escalated)
+
+```cpp
+// 🔴 WRONG for Cortex-M4 — 32-bit float access IS atomic on M4
+// Only missing volatile risk: compiler may cache the value
+float sensor_value;  // Missing volatile
+
+void EXTI_IRQHandler() {
+    sensor_value = read_adc();  // 32-bit aligned store → atomic on M4
+}
+
+void control_loop() {
+    if (sensor_value > 50.0f) { ... }  // compiler may use stale value
+}
+```
+
+#### ✅ Correct
+
+```cpp
+// 🟡 MEDIUM — no tear, but compiler might cache
+volatile float sensor_value;  // volatile prevents compiler caching
+
+void EXTI_IRQHandler() {
+    sensor_value = read_adc();  // atomic store, compiler won't skip
+}
+
+void control_loop() {
+    if (sensor_value > 50.0f) { ... }  // re-reads every time
+}
+```
+
+#### Calibration Rule
+When reviewing shared-variable access across ISR/main contexts:
+
+1. **Check architecture**: if Cortex-M3/M4/M7 with 32-bit aligned access → tear is not the risk
+2. **Check volatile**: missing volatile → compiler optimization risk → 🟠 HIGH, not 🔴 CRITICAL
+3. **Check access size**: if type > 32-bit (double, 64-bit struct) or unaligned → 🔴 CRITICAL tear possible
+4. **Document reasoning**: note the architecture context in the report so the reader understands the calibration
+
+---
+
 ## Code Review Report Format
 
 When reviewing C/C++ code, structure your output as:
@@ -821,6 +927,7 @@ When reviewing C/C++ code, structure your output as:
 
 ### 1. [Issue Title]
 **File:** `path/to/file.cpp:42`
+**Call path:** [main() → init → ... → function — required: prove this code is reachable]
 **Issue:** [Description of the problem]
 **Impact:** [Why this matters — e.g., "use-after-free leads to exploitable crash"]
 **Fix:**
