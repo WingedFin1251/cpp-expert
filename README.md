@@ -186,6 +186,7 @@ Automatically detects C vs C++ (by file extension) and switches between `gcc`/`g
 - [skills.sh 技能市场 / skills.sh Marketplace](https://skills.sh/) 
 
 ### 版本历史 / Version History
+- **v1.2** — 执行路径追踪（死代码降级）、架构原子性白名单（Cortex-M4 32位对齐）、控制算法连续性审查、报告模板要求 Call Path / Execution path tracing, Cortex-M atomicity whitelist, control algorithm continuity, call-path in reports
 - **v1.1** — 新增 Borrowed Lifetimes 和 C ABI 规则、C++20/23 深度参考（Concepts/Ranges/Coroutines/span/format）、触发词扩展、Review Checklist / Added borrowed lifetimes & C ABI rules, C++20/23 deep reference, trigger expansion, review checklist
 - **v1.0** — 初始版本：8维度规则体系、3 参考文件、2 工具脚本 / Initial release: 8-dimension rule system, 3 reference files, 2 tool scripts
 
