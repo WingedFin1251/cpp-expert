@@ -615,6 +615,69 @@ void wait_for_work() {
 }
 ```
 
+---
+
+### 4.5 Architecture-Specific Atomicity (v1.2)
+
+**Impact: HIGH | Category: concurrency | Tags:** atomic, architecture, arm, cortex-m
+
+#### Why This Matters
+Not all architectures treat unguarded variable access the same. On
+Cortex-M3/M4/M7, 32-bit aligned reads and writes are **single-copy
+atomic**. Flagging every cross-interrupt variable access as 🔴 CRITICAL
+overestimates the risk on these platforms.
+
+#### Architecture Atomicity Table
+
+| Architecture | 32-bit aligned | 64-bit | volatile needed? |
+|-------------|---------------|--------|-----------------|
+| Cortex-M0/M0+ | ❌ Not atomic | ❌ | ✅ yes |
+| **Cortex-M3/M4/M7** | ✅ **Single-copy atomic** | ❌ | ✅ yes for compiler |
+| Cortex-A (generic) | ❌ Depends on cache policy | ❌ | ✅ yes |
+| x86/x64 | ✅ Up to 64-bit | ✅ (if aligned) | ✅ yes for compiler |
+
+#### ❌ Incorrect (over-escalated)
+
+```cpp
+// 🔴 WRONG for Cortex-M4 — 32-bit float access IS atomic on M4
+// Only missing volatile risk: compiler may cache the value
+float sensor_value;  // Missing volatile
+
+void EXTI_IRQHandler() {
+    sensor_value = read_adc();  // 32-bit aligned store → atomic on M4
+}
+
+void control_loop() {
+    if (sensor_value > 50.0f) { ... }  // compiler may use stale value
+}
+```
+
+#### ✅ Correct
+
+```cpp
+// 🟡 MEDIUM — no tear, but compiler might cache
+volatile float sensor_value;  // volatile prevents compiler caching
+
+void EXTI_IRQHandler() {
+    sensor_value = read_adc();  // atomic store, compiler won't skip
+}
+
+void control_loop() {
+    if (sensor_value > 50.0f) { ... }  // re-reads every time
+}
+```
+
+#### Calibration Rule
+When reviewing shared-variable access across ISR/main contexts:
+
+1. **Check architecture**: if Cortex-M3/M4/M7 with 32-bit aligned access → tear is not the risk
+2. **Check volatile**: missing volatile → compiler optimization risk → 🟠 HIGH, not 🔴 CRITICAL
+3. **Check access size**: if type > 32-bit (double, 64-bit struct) or unaligned → 🔴 CRITICAL tear possible
+4. **Document reasoning**: note the architecture context in the report so the reader understands the calibration
+
+---
+
+
 ## 5. Modern C++ Best Practices
 
 **Impact: MEDIUM | Category: modern-cpp | Tags:** cpp11, cpp14, cpp17, cpp20
@@ -933,66 +996,6 @@ void MyClass::doSomething() {
     // implementation
 }
 ```
-
----
-
-### 4.5 Architecture-Specific Atomicity (v1.2)
-
-**Impact: HIGH | Category: concurrency | Tags:** atomic, architecture, arm, cortex-m
-
-#### Why This Matters
-Not all architectures treat unguarded variable access the same. On
-Cortex-M3/M4/M7, 32-bit aligned reads and writes are **single-copy
-atomic**. Flagging every cross-interrupt variable access as 🔴 CRITICAL
-overestimates the risk on these platforms.
-
-#### Architecture Atomicity Table
-
-| Architecture | 32-bit aligned | 64-bit | volatile needed? |
-|-------------|---------------|--------|-----------------|
-| Cortex-M0/M0+ | ❌ Not atomic | ❌ | ✅ yes |
-| **Cortex-M3/M4/M7** | ✅ **Single-copy atomic** | ❌ | ✅ yes for compiler |
-| Cortex-A (generic) | ❌ Depends on cache policy | ❌ | ✅ yes |
-| x86/x64 | ✅ Up to 64-bit | ✅ (if aligned) | ✅ yes for compiler |
-
-#### ❌ Incorrect (over-escalated)
-
-```cpp
-// 🔴 WRONG for Cortex-M4 — 32-bit float access IS atomic on M4
-// Only missing volatile risk: compiler may cache the value
-float sensor_value;  // Missing volatile
-
-void EXTI_IRQHandler() {
-    sensor_value = read_adc();  // 32-bit aligned store → atomic on M4
-}
-
-void control_loop() {
-    if (sensor_value > 50.0f) { ... }  // compiler may use stale value
-}
-```
-
-#### ✅ Correct
-
-```cpp
-// 🟡 MEDIUM — no tear, but compiler might cache
-volatile float sensor_value;  // volatile prevents compiler caching
-
-void EXTI_IRQHandler() {
-    sensor_value = read_adc();  // atomic store, compiler won't skip
-}
-
-void control_loop() {
-    if (sensor_value > 50.0f) { ... }  // re-reads every time
-}
-```
-
-#### Calibration Rule
-When reviewing shared-variable access across ISR/main contexts:
-
-1. **Check architecture**: if Cortex-M3/M4/M7 with 32-bit aligned access → tear is not the risk
-2. **Check volatile**: missing volatile → compiler optimization risk → 🟠 HIGH, not 🔴 CRITICAL
-3. **Check access size**: if type > 32-bit (double, 64-bit struct) or unaligned → 🔴 CRITICAL tear possible
-4. **Document reasoning**: note the architecture context in the report so the reader understands the calibration
 
 ---
 
