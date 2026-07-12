@@ -63,7 +63,7 @@ top-to-bottom as if executing it line by line.
 Identify C vs C++ via extension and constructs. See Rule 0.
 
 ### 2. **Basic C Semantics & Compiler Traps** (🔴 CRITICAL — v1.3)
-Check each function for language-level traps. See AGENTS.md §5.4.
+Check each function for language-level traps. See AGENTS.md §5.7.
 
 ### 3. **Try Compilation** (CRITICAL)
 Run `gcc` (for C) or `g++` (for C++) with `-fsyntax-only -Wall -Wextra -std=c++20` (or `-std=c11` for C) to catch
@@ -106,15 +106,15 @@ Execute `run-static-analysis.sh` and optionally `run-sanitizers.sh`.
 
 | Stage | Priority | Dimension | Key Checks |
 |-------|----------|-----------|------------|
-| **1** ⚙️ MANDATORY | — | Language Detection | C vs C++, extensions, std libs |
-| **1** 🔴 CRITICAL | — | C Semantics (v1.3) | Pass-by-value traps, volatile, array bounds, variable shadowing |
-| **1** 🔴 CRITICAL | Memory Safety | Smart pointers, leaks, buffer overflows, dangling |
-| **1** 🔴 CRITICAL | UB & Compilation | Overflow, aliasing, missing virtual dtor, ODR |
-| **2** ⚙️ MANDATORY | Execution Path Tracing | Build call graph from main(), dead code → MEDIUM max |
-| **2** 🟠 HIGH | RAII & Resources | Rule of Five, cleanup, exception safety |
-| **2** 🟠 HIGH | Concurrency | Data races, locking, atomics |
-| **2** 🟡 MEDIUM | Modern C++ | auto, constexpr, nullptr, override |
-| **2** 🟡 MEDIUM | Style | Naming, headers, const correctness |
+| **1** | ⚙️ MANDATORY | Language Detection | C vs C++, extensions, std libs |
+| **1** | 🔴 CRITICAL | C Semantics (v1.3) | Pass-by-value traps, volatile, array bounds, variable shadowing |
+| **1** | 🔴 CRITICAL | Memory Safety | Smart pointers, leaks, buffer overflows, dangling |
+| **1** | 🔴 CRITICAL | UB & Compilation | Overflow, aliasing, missing virtual dtor, ODR |
+| **2** | ⚙️ MANDATORY | Execution Path Tracing | Build call graph from main(), dead code → MEDIUM max |
+| **2** | 🟠 HIGH | RAII & Resources | Rule of Five, cleanup, exception safety |
+| **2** | 🟠 HIGH | Concurrency | Data races, locking, atomics |
+| **2** | 🟡 MEDIUM | Modern C++ | auto, constexpr, nullptr, override |
+| **2** | 🟡 MEDIUM | Style | Naming, headers, const correctness |
 
 ## Bundled Resources
 
