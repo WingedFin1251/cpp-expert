@@ -1,8 +1,8 @@
 # cpp-expert
 
-**C/C++ 代码审查技能 — 基于 8 维度优先级规则的自动化代码质量检查，集成 clang-tidy / cppcheck / AddressSanitizer 工具链。**
+**C/C++ 代码审查技能 — 双阶段审查工作流 + 8 维度优先级规则，集成 clang-tidy / cppcheck / AddressSanitizer 工具链。**
 
-**A C/C++ code review skill — automated quality checks based on 8 priority-ranked rule dimensions, integrating clang-tidy / cppcheck / AddressSanitizer toolchains.**
+**A C/C++ code review skill — two-stage review workflow + 8 priority-ranked rule dimensions, integrating clang-tidy / cppcheck / AddressSanitizer toolchains.**
 
 > 灵感来自 [python-expert](https://skills.sh/)，专为 C/C++ 内存安全、未定义行为、资源管理、并发安全、现代 C++ 实践和代码风格审查设计。
 >
@@ -186,6 +186,7 @@ Automatically detects C vs C++ (by file extension) and switches between `gcc`/`g
 - [skills.sh 技能市场 / skills.sh Marketplace](https://skills.sh/) 
 
 ### 版本历史 / Version History
+- **v1.3** — 双阶段审查工作流、C 语义陷阱规则（传值/volatile/数组越界）、修复 §4.5 位置 / Two-stage review workflow, C semantics trap rules, fix §4.5 position
 - **v1.2** — 执行路径追踪（死代码降级）、架构原子性白名单（Cortex-M4 32位对齐）、控制算法连续性审查、报告模板要求 Call Path / Execution path tracing, Cortex-M atomicity whitelist, control algorithm continuity, call-path in reports
 - **v1.1** — 新增 Borrowed Lifetimes 和 C ABI 规则、C++20/23 深度参考（Concepts/Ranges/Coroutines/span/format）、触发词扩展、Review Checklist / Added borrowed lifetimes & C ABI rules, C++20/23 deep reference, trigger expansion, review checklist
 - **v1.0** — 初始版本：8维度规则体系、3 参考文件、2 工具脚本 / Initial release: 8-dimension rule system, 3 reference files, 2 tool scripts
