@@ -21,6 +21,7 @@
 5. [Modern C++ Best Practices](#5-modern-c-best-practices)
     5.7 [Basic C Semantics & Compiler Traps (v1.3)](#57-basic-c-semantics--compiler-traps-v13)
 6. [Code Style & Organization](#6-code-style--organization)
+    6.1.1 [File-Scope Static Enforcement (v1.5)](#611-file-scope-static-enforcement-v15)
 
 ### Review Process — **MANDATORY**
 7. [Attention Budget Guide (v1.4)](#attention-budget-guide-v14--mandatory)
@@ -68,6 +69,8 @@ When `unified-audit-report.json` is present, you MUST use it as the **sole sourc
 | `control_chain_breaks` | `severity: WARNING` | 🟡 MEDIUM — "function pointer escape — verify runtime" |
 | `stack_overflow_risks` | `severity: HIGH` | 🟠 HIGH — include estimated depth and file/line |
 | `stack_overflow_risks` | `severity: MEDIUM` | 🟡 MEDIUM — "stack usage advisory" |
+| `style_issues` | `id: B15` | 🟠 HIGH — "file-scope global — should be static" |
+| `style_issues` | Others | 🟡 MEDIUM — "code style or structure concern" |
 
 **Degradation mode (no JSON available):**
 - Do NOT claim specific line numbers you cannot verify.

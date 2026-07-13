@@ -1,12 +1,12 @@
 // style_audit.js — Code style & project structure auditor (v1.5)
 // Detects: sentinel assignments (B16), EXTI wrong file (B17), file-scope global i/j/k
-// Usage: node style_audit.js [--dir Src]
+// Usage: node style_audit.js <target-dir>
 
 const fs = require('fs');
 const path = require('path');
 
 const IGNORE_DIRS = ['Drivers', 'Middlewares', '.git', 'node_modules', 'build', 'Debug', 'Release', '.vscode'];
-const EXTI_FILE_PATTERNS = [/bsp_exti/i, /exti/i, /gpio/i, /bsp_.*\.c$/];
+const SORT_KEYWORDS = /\b(sort|partition|qsort|qusort|quick|pivot|swap)\b/i;
 
 function collectFiles(dirOrDirs, results = []) {
     const dirs = dirOrDirs.split(',').map(d => d.trim()).filter(d => d);
@@ -22,19 +22,28 @@ function collectFiles(dirOrDirs, results = []) {
     return results;
 }
 
+function hasContext(lines, idx, keywords, range = 10) {
+    const start = Math.max(0, idx - range);
+    const end = Math.min(lines.length, idx + range + 1);
+    for (let i = start; i < end; i++) {
+        if (keywords.test(lines[i])) return true;
+    }
+    return false;
+}
+
 function detectSentinelAssignments(content, filePath) {
     const issues = [];
     const lines = content.split('\n');
     for (let i = 0; i < lines.length; i++) {
         const m = lines[i].match(/(\w+)\[(\d+)\]\s*=\s*\w+\[\s*[^\]]+\]/);
-        if (m && m[2] === '0') {
+        if (m && m[2] === '0' && hasContext(lines, i, SORT_KEYWORDS)) {
             issues.push({
                 id: 'B16',
                 pattern: 'sentinel_assignment',
                 severity: 'MEDIUM',
                 file: filePath,
                 line: i + 1,
-                detail: `${m[1]}[0] = ${m[1]}[...] — potential sentinel misuse in sort/swap context`
+                detail: `${m[1]}[0] = ${m[1]}[...] in sort/search context — potential sentinel misuse`
             });
         }
     }
@@ -44,19 +53,22 @@ function detectSentinelAssignments(content, filePath) {
 function detectEXTIFilePlacement(content, filePath) {
     const issues = [];
     const fileName = path.basename(filePath);
-    const isExpectedFile = EXTI_FILE_PATTERNS.some(p => p.test(fileName));
 
-    if (isExpectedFile) return issues; // Already in correct file
+    // Skip files that are expected to contain EXTI code
+    if (/^(bsp_exti|exti|stm32.*it|gpio)/i.test(fileName)) return issues;
 
-    const hasEXTICode = /EXTI|NVIC_Init|HAL_NVIC_SetPriority|GPIO_EXTI/.test(content);
-    if (hasEXTICode) {
+    // Match EXTI/NVIC INIT functions (NOT _IRQHandler names!)
+    const hasEXTIInit = /\b(HAL_EXTI_Init|EXTI_Init|HAL_NVIC_Config|GPIO_EXTI)\s*\(/.test(content);
+    const hasNVICConfig = /\bHAL_NVIC_SetPriority\s*\(/.test(content) && !/IRQHandler/.test(content);
+
+    if (hasEXTIInit || hasNVICConfig) {
         issues.push({
             id: 'B17',
             pattern: 'exti_wrong_file',
             severity: 'MEDIUM',
             file: filePath,
             line: 1,
-            detail: `EXTI/NVIC configuration in ${fileName}, expected in bsp_exti.c or gpio.c`
+            detail: `EXTI/NVIC init in ${fileName}, expected in bsp_exti.c or gpio.c`
         });
     }
     return issues;
@@ -65,19 +77,27 @@ function detectEXTIFilePlacement(content, filePath) {
 function detectFileScopeGlobals(content, filePath) {
     const issues = [];
     const lines = content.split('\n');
-    // Skip function bodies — only check file scope lines
-    let braceDepth = 0;
-    for (let i = 0; i < lines.length; i++) {
-        const line = lines[i];
-        // Track brace depth to identify file scope
-        for (const ch of line) {
-            if (ch === '{') braceDepth++;
-            else if (ch === '}') braceDepth--;
-        }
-        if (braceDepth > 0) continue; // Inside a function — skip
+    const stripped = content.replace(/"[^"]*"/g, '""').replace(/'[^']*'/g, "''");
+    const strippedLines = stripped.split('\n');
 
-        // Match non-static global declarations of single-letter variables
-        const m = line.match(/^(?!.*static)\s*(int|float|char|double|uint8_t|uint16_t|uint32_t)\s+(i|j|k|cnt|temp|buf|ret|tmp)\b/);
+    let insideFunction = false;
+    for (let i = 0; i < lines.length; i++) {
+        const rawLine = lines[i];
+        const cleanLine = strippedLines[i];
+
+        // Detect function start: line ends with { and contains a function pattern
+        if (/^\s*\w+.*\{\s*$/.test(cleanLine) && !/^\s*(#|typedef|struct|enum)/.test(cleanLine)) {
+            insideFunction = true;
+        }
+        // Detect function end: lone } at start of line
+        if (/^\s*\}\s*$/.test(cleanLine)) {
+            insideFunction = false;
+        }
+
+        if (insideFunction) continue;
+
+        // Match non-static global declarations
+        const m = rawLine.match(/^(?!.*static)\s*(int|float|char|double|uint8_t|uint16_t|uint32_t)\s+(i|j|k|cnt|temp|buf|ret|tmp)\s*[=;]/);
         if (m) {
             issues.push({
                 id: 'B15',
