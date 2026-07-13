@@ -21,18 +21,6 @@ function collectFiles(dirOrDirs, results = []) {
     return results;
 }
 
-function extractPort(lines, currentLine) {
-    // Walk upward to find the most recent GPIO_Init(GPIOx, ...) call
-    for (let j = currentLine; j >= 0; j--) {
-        const m = lines[j].match(/GPIO_Init\s*\(\s*(GPIO[A-Z0-9]+)\s*,/);
-        if (m) return m[1];
-        // Also check HAL_GPIO_Init
-        const m2 = lines[j].match(/HAL_GPIO_Init\s*\(\s*(GPIO[A-Z0-9]+)\s*,/);
-        if (m2) return m2[1];
-    }
-    return 'UNKNOWN';
-}
-
 function parseGPIOConfig(filePath) {
     const content = fs.readFileSync(filePath, 'utf-8');
     // Strip comments to avoid false matches in strings/comments
@@ -56,13 +44,23 @@ function parseGPIOConfig(filePath) {
             results.push({ file: filePath, line: lineNum, pin: `${m[1]}_Pin${pinNum}`, config: m[3] });
         }
 
-        // GPIO_InitStructure.GPIO_Pin = GPIO_Pin_9 | GPIO_Pin_10  — extract EACH pin
-        m = line.match(/GPIO_Pin\s*=\s*([^;]+)/);
+        // GPIO_InitStruct.Pin = GPIO_PIN_9 | GPIO_PIN_10 (HAL)  OR
+        // GPIO_InitStructure.GPIO_Pin = GPIO_Pin_9 (SPL)
+        // Extract struct variable name, then search DOWNWARD for matching GPIO_Init call
+        m = line.match(/(\w+)\.(?:GPIO_)?Pin\s*=\s*([^;]+)/i);
         if (m) {
-            const port = extractPort(lines, i);
-            const pinExpr = m[1].trim();
-            const pinMatches = pinExpr.match(/GPIO_Pin_(\d+)/g);
+            const structName = m[1];
+            const pinExpr = m[2].trim();
+            // GPIO_PIN_9 (STM32 HAL) or GPIO_Pin_9 (older SPL) — match both
+            const pinMatches = pinExpr.match(/GPIO_P[Ii][Nn]_(\d+)/g);
             if (pinMatches) {
+                // Build regex to match GPIO_Init(GPIOx, &structName)
+                const portRe = new RegExp(`(?:HAL_)?GPIO_Init\\s*\\(\\s*(GPIO[A-Z0-9]+)\\s*,\\s*&?\\s*${structName}\\b`);
+                let port = 'UNKNOWN';
+                for (let j = i; j < lines.length; j++) {
+                    const pm = lines[j].match(portRe);
+                    if (pm) { port = pm[1]; break; }
+                }
                 pinMatches.forEach(pm => {
                     const pinNum = pm.match(/(\d+)/)[0];
                     results.push({ file: filePath, line: lineNum, pin: `${port}_Pin${pinNum}`, config: 'GPIO_INIT' });

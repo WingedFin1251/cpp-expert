@@ -7,7 +7,6 @@ const fs = require('fs');
 const path = require('path');
 
 const IGNORE_DIRS = ['Drivers', 'Middlewares', '.git', 'node_modules', 'build', 'Debug', 'Release', '.vscode'];
-const ROOT_PATTERNS = [/_IRQHandler\b/, /xTaskCreate\s*\(/];
 const CONSUMER_PATTERNS = /(PLL|PID|Observer|FOC|Calc|Control|Update)/;
 
 function collectFiles(dirOrDirs, results = []) {
@@ -28,7 +27,7 @@ function extractFunctions(content) {
     const funcs = [];
     // Match function definitions: [static] [inline] return_type name(params) {
     // Captures the LAST identifier before ( as function name
-    const re = /(?:[\w\s\*]+?)\b(\w+)\s*\([^)]*\)\s*\{/g;
+    const re = /(?:[\w\s\*]*?)\b(\w+)\s*\([^)]*\)\s*\{/g;
     let m;
     while ((m = re.exec(content)) !== null) {
         const name = m[1];
@@ -56,9 +55,16 @@ function main(dir) {
         const funcs = extractFunctions(content);
         for (const fn of funcs) {
             fn.file = f;
-            const isRoot = ROOT_PATTERNS.some(p => p.test(fn.name));
-            if (isRoot) rootFuncs.push(fn);
+            if (/_IRQHandler\b/.test(fn.name)) rootFuncs.push(fn);
             allFuncs.push(fn);
+        }
+        // Extract RTOS task entry points: xTaskCreate(TaskFunc, ...)
+        const taskRe = /xTaskCreate\s*\(\s*(\w+)\s*,/g;
+        let tm;
+        while ((tm = taskRe.exec(content)) !== null) {
+            const taskName = tm[1];
+            const taskFunc = allFuncs.find(fn => fn.name === taskName);
+            if (taskFunc && !rootFuncs.includes(taskFunc)) rootFuncs.push(taskFunc);
         }
     }
 
@@ -80,14 +86,15 @@ function main(dir) {
             if (isRoot) continue; // ISR handlers themselves are not "broken"
             if (calledFromRoot.has(fn.name)) continue;
 
-            // Function pointer escape detection: assignment RHS, not comparison
-            // Use regex to distinguish `ptr = func` (assignment) from `ptr == func` (comparison)
-            const fpRe = new RegExp(`(?<![=!])=\\s*&?\\s*\\b${fn.name}\\b`);
-            const ptrDeclRe = new RegExp(`\\(\\s*\\*${fn.name.replace(/_/g, '[_\\\\s]*')}`);
+            // Function pointer escape detection: assignment RHS, argument pass, or declaration
+            const fpRe = new RegExp(`(?<![=!])=\\s*&?\\s*\\b${fn.name}\\b`);       // ptr = func or ptr = &func
+            const paramRe = new RegExp(`[\\(,]\\s*&?\\s*\\b${fn.name}\\b`);         // func(arg) or RegisterCallback(func)
+            const ptrDeclRe = new RegExp(`\\(\\s*\\*\\s*\\w+\\s*\\)\\s*\\(`);      // type (*ptr)(params)
             const isFuncPtr = allFuncs.some(other =>
-                fpRe.test(other.body) ||                       // ptr = &func or ptr = func
-                ptrDeclRe.test(other.body) ||                   // type (*func)(params) declaration
-                other.body.includes(fn.name + ';')              // ptr = expr_with_func; case
+                fpRe.test(other.body) ||                                            // assignment
+                paramRe.test(other.body) ||                                         // passed as argument
+                (ptrDeclRe.test(other.body) && other.body.includes(fn.name)) ||      // declared as function ptr type
+                other.body.includes(fn.name + ';')                                   // end-of-statement reference
             );
 
             breaks.push({
