@@ -1,8 +1,8 @@
 # cpp-expert
 
-**C/C++ 代码审查技能 — 双阶段审查工作流 + 8 维度优先级规则，集成 clang-tidy / cppcheck / AddressSanitizer 工具链。**
+**C/C++ 代码审查技能 — 三阶段流水线 + 8 维度优先级规则 + 工具辅助降维，集成 clang-tidy / cppcheck / AddressSanitizer / Node.js 预扫描工具链。**
 
-**A C/C++ code review skill — two-stage review workflow + 8 priority-ranked rule dimensions, integrating clang-tidy / cppcheck / AddressSanitizer toolchains.**
+**A C/C++ code review skill — three-stage pipeline + 8 priority-ranked rule dimensions + tool-assisted dimensionality reduction, integrating clang-tidy / cppcheck / AddressSanitizer / Node.js pre-audit toolchain.**
 
 > 灵感来自 [python-expert](https://skills.sh/)，专为 C/C++ 内存安全、未定义行为、资源管理、并发安全、现代 C++ 实践和代码风格审查设计。
 >
@@ -67,10 +67,18 @@ cpp-expert/
 │   └── cpp-modern.md           # C++11→C++23 特性对照表 + Concepts/Ranges/Coroutines/span/format 深度审查
 │                               # C++11→C++23 feature matrix + deep-dive: Concepts, Ranges, Coroutines, span, format
 └── scripts/
-    ├── run-static-analysis.sh  # clang-tidy + cppcheck 自动化脚本
+    ├── run-static-analysis.sh  # clang-tidy + cppcheck 自动化
     │                           # clang-tidy + cppcheck automation
-    └── run-sanitizers.sh       # AddressSanitizer + UBSan 运行脚本
-                                # AddressSanitizer + UBSan runner
+    ├── run-sanitizers.sh       # AddressSanitizer + UBSan 运行
+    │                           # AddressSanitizer + UBSan runner
+    ├── run-preaudit.js         # v1.4 预扫描调度器 (引脚/控制链/栈深度)
+    │                           # v1.4 pre-audit orchestrator
+    ├── pin_audit.js            # GPIO 引脚冲突矩阵扫描
+    │                           # GPIO pin conflict scanner
+    ├── ctrl_chain_check.js     # 控制链调用图分析 (支持 RTOS)
+    │                           # Control chain call graph (RTOS-aware)
+    └── stack_depth_audit.js    # ISR 栈深度估算 (Cortex-M aware)
+                                # ISR stack depth estimator
 ```
 
 ---
@@ -99,19 +107,27 @@ Automatically identifies whether the code is C or C++ based on file extension, k
 
 ## 工作流程 / Workflow
 
-当技能触发时，AI 依次执行 / When the skill triggers, the AI executes in sequence:
+当技能触发时，AI 依次执行三阶段流水线 / When the skill triggers, the AI executes in a three-stage pipeline:
 
 ```
-1. 语言检测 / Language detection
-   → 2. 编译验证 / Compilation check (-fsyntax-only)
-3. 内存安全审查 / Memory safety review
-   → 4. UB/编译审查 / UB & compilation review
-5. RAII/资源审查 / RAII & resource review
-   → 6. 并发安全审查 / Concurrency safety review
-7. 现代 C++ 建议 / Modern C++ suggestions
-   → 8. 风格审查 / Style review
-9. 运行工具脚本 / Run tool scripts
-   → 10. 生成结构化报告 / Generate structured report
+╔═══════════════════════════════════════════╗
+║  Stage 0: 工具预处理 / Tool Preprocessing ║  0% AI 预算
+║  node scripts/run-preaudit.js             ║  → unified-audit-report.json
+╚═══════════════════════════════════════════╝
+                      ↓
+╔═══════════════════════════════════════════╗
+║  Stage 1: 微观逻辑扫描 / Micro Logic Scan ║  70% AI 预算
+║  1. 语言检测 → 2. C 语义陷阱              ║
+║  3. 编译验证 → 4. 内存安全 → 5. UB/编译   ║
+╚═══════════════════════════════════════════╝
+                      ↓
+╔═══════════════════════════════════════════╗
+║  Stage 2: 宏观架构裁决 / Architecture Verdict  ║  30% AI 预算
+║  读取 unified-audit-report.json            ║
+║  6. 预审计报告 → 7. 路径追踪               ║
+║  8. RAII → 9. 并发 → 10. 现代 C++         ║
+║  11. 风格 → 12. 工具 → 13. 生成报告        ║
+╚═══════════════════════════════════════════╝
 ```
 
 ---
@@ -185,7 +201,25 @@ Automatically detects C vs C++ (by file extension) and switches between `gcc`/`g
 - [Claude Code Skills 文档 / Claude Code Skills Docs](https://docs.anthropic.com/en/docs/claude-code/skills) 
 - [skills.sh 技能市场 / skills.sh Marketplace](https://skills.sh/) 
 
+### `run-preaudit.js` (v1.4)
+一键运行全部三个预扫描模块，输出统一审计报告 / Runs all three pre-audit modules, outputs a unified JSON report.
+
+```bash
+node scripts/run-preaudit.js --include-dir Src/
+# → writes unified-audit-report.json
+```
+
+**Degradation mode:** 无 Node.js 环境时 AI 降级为人工引导模式。
+
+**JSON 报告字段：**
+| 字段 | 来源 | 用途 |
+|------|------|------|
+| `pin_conflicts` | pin_audit.js | GPIO 引脚冲突 → 🔴 CRITICAL |
+| `control_chain_breaks` | ctrl_chain_check.js | 控制链开环 → 🟠 HIGH |
+| `stack_overflow_risks` | stack_depth_audit.js | ISR 栈深度 → 🟠 HIGH/🟡 MEDIUM |
+
 ### 版本历史 / Version History
+- **v1.4** — 工具辅助降维：4 Node.js 预扫描脚本（引脚冲突/控制链/栈深度）、三阶段流水线、JSON 总线报告 / Tool-assisted dimensionality reduction: 4 pre-audit scripts, three-stage pipeline, JSON bus report
 - **v1.3** — 双阶段审查工作流、C 语义陷阱规则（传值/volatile/数组越界）、修复 §4.5 位置 / Two-stage review workflow, C semantics trap rules, fix §4.5 position
 - **v1.2** — 执行路径追踪（死代码降级）、架构原子性白名单（Cortex-M4 32位对齐）、控制算法连续性审查、报告模板要求 Call Path / Execution path tracing, Cortex-M atomicity whitelist, control algorithm continuity, call-path in reports
 - **v1.1** — 新增 Borrowed Lifetimes 和 C ABI 规则、C++20/23 深度参考（Concepts/Ranges/Coroutines/span/format）、触发词扩展、Review Checklist / Added borrowed lifetimes & C ABI rules, C++20/23 deep reference, trigger expansion, review checklist

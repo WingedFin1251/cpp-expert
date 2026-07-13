@@ -1,5 +1,38 @@
 # cpp-expert 变更日志
 
+## [1.4.0] — 2026-07-13
+
+### 新增
+- 架构：三阶段流水线（Stage 0 预处理 → Stage 1 微观 → Stage 2 宏观）
+- scripts/pin_audit.js：GPIO 引脚冲突矩阵扫描（支持 HAL `GPIO_PIN_X` 和 SPL `GPIO_Pin_X`）
+- scripts/ctrl_chain_check.js：控制链调用图分析（支持 ISR + FreeRTOS xTaskCreate 入口检测，函数指针逃逸检测）
+- scripts/stack_depth_audit.js：ISR 栈深度估算（支持 Cortex-M 嵌套中断乘数）
+- scripts/run-preaudit.js：统一调度器，输出 unified-audit-report.json（93% Token 缩减）
+- AGENTS.md §1.2：统一审计报告使用规则（JSON 字段→报告动作映射表）
+- SKILL.md：降级模式（Node.js 不可用时自动转人工引导）
+- AGENTS.md 目录：新增 Attention Budget Guide 和 §5.7 C Semantics 条目
+- SKILL.md Bundled Resources：列出 4 个新 Node.js 脚本
+- SKILL.md 触发词：追加 GPIO、ISR、RTOS、FreeRTOS、pre-audit 等关键词
+
+### 修复
+- 修复 pin_audit.js 端口提取顺序错误（结构体名→向下匹配 GPIO_Init 调用）
+- 修复 pin_audit.js `GPIO_PIN_9` vs `GPIO_Pin_9` 大小写兼容
+- 修复 pin_audit.js `.Pin` vs `.GPIO_Pin` 双字段名支持
+- 修复 ctrl_chain_check.js RTOS 任务入口漏报（xTaskCreate 参数提取）
+- 修复 ctrl_chain_check.js `(?:[\w\s\*]*?)` 允许零前缀函数修饰符
+- 修复 ctrl_chain_check.js `==` 误判为函数指针赋值
+- 修复 ctrl_chain_check.js 函数指针参数传递检测（`HAL_RegisterCallback(&fn)`）
+- 修复 stack_depth_audit.js uint32_t 双重计数（合并 typeMap）
+- 修复 stack_depth_audit.js `_IRQn` 枚举误匹配
+- 修复 run-preaudit.js 多目录忽略（`--include-dir A --include-dir B`）
+- 修复 run-preaudit.js `Promise.all`→顺序执行（设计一致性）
+- 修复 run-preaudit.js execFile(process.execPath) 跨平台调用
+- 修复三大脚本注释/字符串中 `}` 干扰大括号计数
+- 修复 SKILL.md 重复编号 7.
+- 修复 SKILL.md 降级模式硬编码 line 42
+- 修复 AGENTS.md 目录缺失条目
+- 修复 AGENTS.md 缺少 JSON 使用规则
+
 ## [1.3.0] — 2026-07-09
 
 ### 新增
