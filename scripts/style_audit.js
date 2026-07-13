@@ -99,7 +99,7 @@ function detectFileScopeGlobals(content, filePath) {
             // Use cleanLine (comment/string stripped) to avoid false positives on comments/#defines
             const lineToCheck = cleanLine.trim();
             if (lineToCheck && !lineToCheck.startsWith('#')) {
-                const m = lineToCheck.match(/^(?!.*static)\s*(int|float|char|double|uint8_t|uint16_t|uint32_t)\s+(i|j|k|cnt|temp|buf|ret|tmp)\s*[=;]/);
+                const m = lineToCheck.match(/^(?!.*static)\s*(int|float|char|double|uint8_t|uint16_t|uint32_t)\s+(i|j|k|cnt|temp|buf|ret|tmp)\s*[=;\[]/);
                 if (m) {
                     issues.push({
                         id: 'B15',
