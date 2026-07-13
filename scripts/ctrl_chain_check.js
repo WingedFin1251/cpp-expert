@@ -10,25 +10,28 @@ const IGNORE_DIRS = ['Drivers', 'Middlewares', '.git', 'node_modules', 'build', 
 const ROOT_PATTERNS = [/_IRQHandler\b/, /xTaskCreate\s*\(/];
 const CONSUMER_PATTERNS = /(PLL|PID|Observer|FOC|Calc|Control|Update)/;
 
-function collectFiles(dir) {
-    const results = [];
-    if (!fs.existsSync(dir)) return results;
-    const entries = fs.readdirSync(dir, { withFileTypes: true });
-    for (const e of entries) {
-        const full = path.join(dir, e.name);
-        if (e.isDirectory() && !IGNORE_DIRS.includes(e.name)) collectFiles(full, results);
-        else if (e.isFile() && /\.(c|cpp)$/i.test(e.name)) results.push(full);
+function collectFiles(dirOrDirs, results = []) {
+    const dirs = dirOrDirs.split(',').map(d => d.trim()).filter(d => d);
+    for (const dir of dirs) {
+        if (!fs.existsSync(dir)) continue;
+        const entries = fs.readdirSync(dir, { withFileTypes: true });
+        for (const e of entries) {
+            const full = path.join(dir, e.name);
+            if (e.isDirectory() && !IGNORE_DIRS.includes(e.name)) collectFiles(full, results);
+            else if (e.isFile() && /\.(c|cpp)$/i.test(e.name)) results.push(full);
+        }
     }
     return results;
 }
 
 function extractFunctions(content) {
     const funcs = [];
-    // Match function definitions: return_type name(params) {
-    const re = /(\w+)\s+(\w+)\s*\([^)]*\)\s*\{/g;
+    // Match function definitions: [static] [inline] return_type name(params) {
+    // Captures the LAST identifier before ( as function name
+    const re = /(?:[\w\s\*]+?)\b(\w+)\s*\([^)]*\)\s*\{/g;
     let m;
     while ((m = re.exec(content)) !== null) {
-        const name = m[2];
+        const name = m[1];
         const start = m.index;
         // Find matching closing brace (simple brace counter)
         let depth = 1, pos = re.lastIndex;
@@ -48,7 +51,8 @@ function main(dir) {
     const rootFuncs = [];
 
     for (const f of files) {
-        const content = fs.readFileSync(f, 'utf-8');
+        const raw = fs.readFileSync(f, 'utf-8');
+        const content = raw.replace(/\/\/.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, ''); // strip comments
         const funcs = extractFunctions(content);
         for (const fn of funcs) {
             fn.file = f;
@@ -76,12 +80,14 @@ function main(dir) {
             if (isRoot) continue; // ISR handlers themselves are not "broken"
             if (calledFromRoot.has(fn.name)) continue;
 
-            // Function pointer escape detection: check if address-of or cast-assigned
+            // Function pointer escape detection: assignment RHS, not comparison
+            // Use regex to distinguish `ptr = func` (assignment) from `ptr == func` (comparison)
+            const fpRe = new RegExp(`(?<![=!])=\\s*&?\\s*\\b${fn.name}\\b`);
+            const ptrDeclRe = new RegExp(`\\(\\s*\\*${fn.name.replace(/_/g, '[_\\\\s]*')}`);
             const isFuncPtr = allFuncs.some(other =>
-                other.body.includes('= ' + fn.name) ||
-                other.body.includes('= &' + fn.name) ||
-                other.body.includes('=&' + fn.name) ||
-                other.body.includes(fn.name + ';') // ptr declaration: type (*ptr)() = func;
+                fpRe.test(other.body) ||                       // ptr = &func or ptr = func
+                ptrDeclRe.test(other.body) ||                   // type (*func)(params) declaration
+                other.body.includes(fn.name + ';')              // ptr = expr_with_func; case
             );
 
             breaks.push({

@@ -11,7 +11,8 @@ for (let i = 0; i < args.length; i++) {
     if (args[i] === '--exclude' && i + 1 < args.length) excludeDirs.push(args[++i]);
 }
 
-const targetDir = includeDirs.length > 0 ? includeDirs[0] : '.';
+// Support multiple --include-dir args; pass all as space-separated to sub-scripts
+const targetDir = includeDirs.length > 0 ? includeDirs.join(',') : '.';
 const rootDir = process.cwd();
 const scriptsDir = __dirname;
 
