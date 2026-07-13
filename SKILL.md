@@ -27,7 +27,8 @@ Use this skill when:
 **Explicit triggers:** C, C++, C++17, C++20, C++23, smart pointer, unique_ptr,
 shared_ptr, RAII, move semantics, rvalue, template, concept, STL, undefined
 behavior, constexpr, memory, dangling, clang-tidy, cppcheck, AddressSanitizer,
-valgrind, static analysis, code review, memory leak, segfault, buffer overflow
+valgrind, static analysis, code review, memory leak, segfault, buffer overflow, GPIO, ISR, RTOS, FreeRTOS,
+pin conflict, stack depth, pre-audit
 
 ## ⚙️ Rule 0: Language Identification (Meta-Rule)
 
@@ -62,8 +63,9 @@ node scripts/run-preaudit.js --include-dir Src/
 ```
 
 **Degradation mode:** If `unified-audit-report.json` does not exist (Node.js
-unavailable), fall back to manual guidance: "Please check Src/pwm.c line 42 for
-AF configuration conflicts."
+unavailable), fall back to manual guidance based on Stage 1 findings. Identify
+suspicious GPIO/control/ISR areas observed during scanning and guide the user
+to manually verify specific files. Do NOT claim line numbers you cannot verify.
 
 ---
 
@@ -107,22 +109,22 @@ Cross-reference against Stage 1 findings in the final report.
 Locate `main()` or entry function. Build call graph. Dead code → 🟡 MEDIUM max.
 Exception: ISR handlers in vector table are always "alive".
 
-### 7. **Check RAII & Resources** (🟠 HIGH)
+### 8. **Check RAII & Resources** (🟠 HIGH)
 Rule of Five, manual resource cleanup, exception safety, raw arrays vs vector.
 
-### 8. **Check Concurrency** (🟠 HIGH)
+### 9. **Check Concurrency** (🟠 HIGH)
 Data races, mutex patterns, lock ordering, atomic usage, thread-safe init.
 
-### 9. **Modern C++ Suggestions** (🟡 MEDIUM — C++ only)
+### 10. **Modern C++ Suggestions** (🟡 MEDIUM — C++ only)
 auto, constexpr, nullptr, override/final, enum class, [[nodiscard]].
 
-### 10. **Style Review** (🟡 MEDIUM)
+### 11. **Style Review** (🟡 MEDIUM)
 Naming, headers, const correctness, comments.
 
-### 11. **Run Tools**
+### 12. **Run Tools**
 Execute `run-static-analysis.sh` and optionally `run-sanitizers.sh`.
 
-### 12. **Generate Report** using the template in AGENTS.md
+### 13. **Generate Report** using the template in AGENTS.md
 
 ## Quick Reference
 
@@ -147,6 +149,10 @@ Execute `run-static-analysis.sh` and optionally `run-sanitizers.sh`.
 - **references/cpp-modern.md** — C++11→C++20 feature table; load for modernization advice
 - **scripts/run-static-analysis.sh** — clang-tidy + cppcheck automation
 - **scripts/run-sanitizers.sh** — AddressSanitizer + UBSan runner
+- **scripts/run-preaudit.js** — v1.4 pre-audit orchestrator (pin conflict, control chain, stack depth)
+- **scripts/pin_audit.js** — GPIO conflict matrix scanner
+- **scripts/ctrl_chain_check.js** — Control algorithm call chain analyzer (RTOS task aware)
+- **scripts/stack_depth_audit.js** — ISR stack usage estimator (Cortex-M aware)
 
 ## Code Review Output Format
 

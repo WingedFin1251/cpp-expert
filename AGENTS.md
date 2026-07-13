@@ -19,7 +19,11 @@
 
 ### Style & Modern Practices — **MEDIUM**
 5. [Modern C++ Best Practices](#5-modern-c-best-practices)
+    5.7 [Basic C Semantics & Compiler Traps (v1.3)](#57-basic-c-semantics--compiler-traps-v13)
 6. [Code Style & Organization](#6-code-style--organization)
+
+### Review Process — **MANDATORY**
+7. [Attention Budget Guide (v1.4)](#attention-budget-guide-v14--mandatory)
 
 ---
 
@@ -52,6 +56,23 @@ This section defines how to allocate your limited context attention.
 - In Stage 1, do NOT think about GPIO conflicts, ISR priorities, or control chains
 - In Stage 2, do NOT re-read raw GPIO/ISR/DMA init code — the JSON is the sole source of truth
 - If `unified-audit-report.json` does not exist → degradation mode: guide user manually
+
+### Unified Audit Report — Usage Rules (v1.4)
+
+When `unified-audit-report.json` is present, you MUST use it as the **sole source of truth** for hardware conflicts, control chain continuity, and ISR stack risks.
+
+| JSON Field | If Non-Empty | Report Action |
+|------------|--------------|---------------|
+| `pin_conflicts` | Yes | 🔴 CRITICAL — include all occurrences with file/line in final report |
+| `control_chain_breaks` | `severity: HIGH` | 🟠 HIGH — "control loop open — no ISR/RTOS call" |
+| `control_chain_breaks` | `severity: WARNING` | 🟡 MEDIUM — "function pointer escape — verify runtime" |
+| `stack_overflow_risks` | `severity: HIGH` | 🟠 HIGH — include estimated depth and file/line |
+| `stack_overflow_risks` | `severity: MEDIUM` | 🟡 MEDIUM — "stack usage advisory" |
+
+**Degradation mode (no JSON available):**
+- Do NOT claim specific line numbers you cannot verify.
+- Output: "⚠️ Pre-audit unavailable. Based on Stage 1 scanning, potential GPIO/control issues noted at [general location]. Manual verification recommended."
+- Downgrade severity by one level when based solely on manual inspection.
 
 ## 1. Memory Safety
 
