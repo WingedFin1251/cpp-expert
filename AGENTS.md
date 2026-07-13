@@ -964,6 +964,40 @@ int calculate_value(int x) {  // snake_case for functions
 }
 ```
 
+### 6.1.1 File-Scope Static Enforcement (v1.5 — HIGH)
+
+#### ❌ Incorrect
+
+```c
+// File scope — pollutes global namespace
+int i;
+float temp;
+char buf[256];
+
+void process(void) {
+    for (i = 0; i < 10; i++) { ... }
+}
+// i, temp, buf are visible to the entire project — risk of linker conflict
+```
+
+#### ✅ Correct
+
+```c
+static int i;
+static float temp;
+static char buf[256];
+
+void process(void) {
+    for (i = 0; i < 10; i++) { ... }
+}
+// Now limited to this translation unit — linker safe
+```
+
+**Review rule:** Flag every non-static global variable in `.c` files. Single-letter
+names (i, j, k) and generic names (cnt, temp, buf, ret) at file scope are
+🟠 HIGH priority. Exceptions: `main`-level globals that are truly cross-module
+(system state structs, hardware register maps).
+
 ### 6.2 Include Order
 
 #### ❌ Incorrect
