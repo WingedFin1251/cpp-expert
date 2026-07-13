@@ -899,6 +899,34 @@ uint32_t get_status() {
 #define USART1_SR  (*(volatile uint32_t *)USART1_BASE + 0x00)
 ```
 
+**6. Magic Number Detection (v1.5 — MEDIUM)**
+
+Scan for bare numeric literals in function bodies. Every value except `0`, `1`,
+`-1` must be named via `#define` or `const`.
+
+#### ❌ Incorrect
+
+```c
+void set_pwm() {
+    TIM3->CCR1 = 5000;   // What does 5000 mean? Duty cycle? Period?
+    if (adc_val > 4095)  // 4095 = 12-bit ADC max? Not obvious.
+        adc_val = 4095;
+}
+```
+
+#### ✅ Correct
+
+```c
+#define PWM_PERIOD 5000
+#define ADC12_MAX  4095
+
+void set_pwm() {
+    TIM3->CCR1 = PWM_PERIOD;
+    if (adc_val > ADC12_MAX)
+        adc_val = ADC12_MAX;
+}
+```
+
 ## 6. Code Style & Organization
 
 **Impact: MEDIUM | Category: style | Tags:** naming, headers, const, formatting
