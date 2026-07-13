@@ -8,7 +8,7 @@ const path = require('path');
 
 const IGNORE_DIRS = ['Drivers', 'Middlewares', '.git', 'node_modules', 'build', 'Debug', 'Release', '.vscode'];
 const ROOT_PATTERNS = [/_IRQHandler\b/, /xTaskCreate\s*\(/];
-const CONSUMER_PATTERNS = /\b(PLL|PID|Observer|FOC|Calc|Control|Update)\b/;
+const CONSUMER_PATTERNS = /(PLL|PID|Observer|FOC|Calc|Control|Update)/;
 
 function collectFiles(dir) {
     const results = [];
@@ -76,9 +76,12 @@ function main(dir) {
             if (isRoot) continue; // ISR handlers themselves are not "broken"
             if (calledFromRoot.has(fn.name)) continue;
 
-            // Function pointer escape detection: check if assigned to a variable
+            // Function pointer escape detection: check if address-of or cast-assigned
             const isFuncPtr = allFuncs.some(other =>
-                other.body.includes('= ' + fn.name) || other.body.includes('=  ' + fn.name)
+                other.body.includes('= ' + fn.name) ||
+                other.body.includes('= &' + fn.name) ||
+                other.body.includes('=&' + fn.name) ||
+                other.body.includes(fn.name + ';') // ptr declaration: type (*ptr)() = func;
             );
 
             breaks.push({

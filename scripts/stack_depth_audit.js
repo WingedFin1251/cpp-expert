@@ -29,7 +29,7 @@ function extractFunctionBodies(content) {
     let m;
     while ((m = re.exec(content)) !== null) {
         const name = m[2];
-        if (!name.endsWith('_IRQHandler') && !name.endsWith('_IRQn')) continue;
+        if (!name.endsWith('_IRQHandler')) continue;
         const start = m.index;
         let depth = 1, pos = re.lastIndex;
         while (depth > 0 && pos < content.length) {

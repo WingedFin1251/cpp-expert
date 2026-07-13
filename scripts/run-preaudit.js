@@ -20,27 +20,38 @@ function runScript(name) {
         const scriptPath = path.join(scriptsDir, name);
         if (!fs.existsSync(scriptPath)) {
             console.error(`[preaudit] WARNING: ${name} not found, skipping`);
-            return resolve([]);
+            return resolve({ findings: [], status: 'skipped' });
         }
         execFile(process.execPath, [scriptPath, targetDir], { cwd: rootDir, maxBuffer: 1024 * 1024 }, (err, stdout, stderr) => {
             if (err) {
                 console.error(`[preaudit] ERROR running ${name}: ${err.message}`);
-                return resolve([]);
+                return resolve({ findings: [], status: 'error' });
             }
             if (stderr) console.error(stderr);
-            try { resolve(JSON.parse(stdout)); }
-            catch { console.error(`[preaudit] ${name} returned invalid JSON`); resolve([]); }
+            try { resolve({ findings: JSON.parse(stdout), status: 'ok' }); }
+            catch { console.error(`[preaudit] ${name} returned invalid JSON`); resolve({ findings: [], status: 'parse_error' }); }
         });
     });
 }
 
 async function main() {
     const start = Date.now();
-    const [pinConflicts, chainBreaks, stackRisks] = await Promise.all([
-        runScript('pin_audit.js'), runScript('ctrl_chain_check.js'), runScript('stack_depth_audit.js')
-    ]);
+    // Run sequentially (not Promise.all) per design spec — each script is independent
+    const { findings: pinConflicts, status: pinStatus } = await runScript('pin_audit.js');
+    const { findings: chainBreaks, status: chainStatus } = await runScript('ctrl_chain_check.js');
+    const { findings: stackRisks, status: stackStatus } = await runScript('stack_depth_audit.js');
     const report = {
-        meta: { tool_version: '1.4.0', scan_time_ms: Date.now() - start, excluded_dirs: excludeDirs, target_dir: targetDir },
+        meta: {
+            tool_version: '1.4.0',
+            scan_time_ms: Date.now() - start,
+            excluded_dirs: excludeDirs,
+            target_dir: targetDir,
+            modules: {
+                pin_audit: { status: pinStatus, findings: pinConflicts.length },
+                ctrl_chain: { status: chainStatus, findings: chainBreaks.length },
+                stack_depth: { status: stackStatus, findings: stackRisks.length }
+            }
+        },
         pin_conflicts: pinConflicts, control_chain_breaks: chainBreaks, stack_overflow_risks: stackRisks
     };
     const outputPath = path.join(rootDir, 'unified-audit-report.json');
