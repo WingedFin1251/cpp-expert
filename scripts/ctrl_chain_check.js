@@ -16,7 +16,7 @@ function collectFiles(dirOrDirs, results = []) {
         const entries = fs.readdirSync(dir, { withFileTypes: true });
         for (const e of entries) {
             const full = path.join(dir, e.name);
-            if (e.isDirectory() && !IGNORE_DIRS.includes(e.name)) collectFiles(full, results);
+            if (e.isDirectory() && !IGNORE_DIRS.includes(e.name.toLowerCase())) collectFiles(full, results);
             else if (e.isFile() && /\.(c|cpp)$/i.test(e.name)) results.push(full);
         }
     }
