@@ -26,7 +26,7 @@ function detectSentinelAssignments(content, filePath) {
     const issues = [];
     const lines = content.split('\n');
     for (let i = 0; i < lines.length; i++) {
-        const m = lines[i].match(/(\w+)\[(\d+)\]\s*=\s*\w+\[\s*\w+\s*\]/);
+        const m = lines[i].match(/(\w+)\[(\d+)\]\s*=\s*\w+\[\s*[^\]]+\]/);
         if (m && m[2] === '0') {
             issues.push({
                 id: 'B16',

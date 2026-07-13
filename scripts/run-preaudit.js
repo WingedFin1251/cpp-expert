@@ -41,23 +41,26 @@ async function main() {
     const { findings: pinConflicts, status: pinStatus } = await runScript('pin_audit.js');
     const { findings: chainBreaks, status: chainStatus } = await runScript('ctrl_chain_check.js');
     const { findings: stackRisks, status: stackStatus } = await runScript('stack_depth_audit.js');
+    const { findings: styleIssues, status: styleStatus } = await runScript('style_audit.js');
     const report = {
         meta: {
-            tool_version: '1.4.0',
+            tool_version: '1.5.0',
             scan_time_ms: Date.now() - start,
             excluded_dirs: excludeDirs,
             target_dir: targetDir,
             modules: {
                 pin_audit: { status: pinStatus, findings: pinConflicts.length },
                 ctrl_chain: { status: chainStatus, findings: chainBreaks.length },
-                stack_depth: { status: stackStatus, findings: stackRisks.length }
+                stack_depth: { status: stackStatus, findings: stackRisks.length },
+                style_audit: { status: styleStatus, findings: styleIssues.length }
             }
         },
-        pin_conflicts: pinConflicts, control_chain_breaks: chainBreaks, stack_overflow_risks: stackRisks
+        pin_conflicts: pinConflicts, control_chain_breaks: chainBreaks, stack_overflow_risks: stackRisks,
+        style_issues: styleIssues
     };
     const outputPath = path.join(rootDir, 'unified-audit-report.json');
     fs.writeFileSync(outputPath, JSON.stringify(report, null, 2));
-    console.log(`[PREAUDIT] ${pinConflicts.length} conflicts, ${chainBreaks.length} chain breaks, ${stackRisks.length} stack risks — ${report.meta.scan_time_ms}ms`);
+    console.log(`[PREAUDIT] ${pinConflicts.length} conflicts, ${chainBreaks.length} chain breaks, ${stackRisks.length} stack risks, ${styleIssues.length} style issues — ${report.meta.scan_time_ms}ms`);
     console.log(`[PREAUDIT] Report written to ${outputPath}`);
 }
 main().catch(err => { console.error('[preaudit] Fatal:', err); process.exit(1); });

@@ -153,6 +153,7 @@ Execute `run-static-analysis.sh` and optionally `run-sanitizers.sh`.
 - **scripts/pin_audit.js** — GPIO conflict matrix scanner
 - **scripts/ctrl_chain_check.js** — Control algorithm call chain analyzer (RTOS task aware)
 - **scripts/stack_depth_audit.js** — ISR stack usage estimator (Cortex-M aware)
+- **scripts/style_audit.js** — v1.5 style auditor (sentinel patterns, EXTI file placement, file-scope globals)
 
 ## Code Review Output Format
 
