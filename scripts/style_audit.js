@@ -89,18 +89,24 @@ function detectFileScopeGlobals(rawContent, strippedContent, filePath) {
             const lineToCheck = cleanLine.trim();
             if (lineToCheck && !lineToCheck.startsWith('#')) {
                 // Support const/volatile/unsigned prefixes, pointer (*), exclude typedef/extern
-                const m = lineToCheck.match(
-                    /^(?!.*static)(?!.*typedef)(?!.*extern)\s*(?:volatile\s+|const\s+|unsigned\s+)*(int|float|char|double|uint8_t|uint16_t|uint32_t)\s*\**\s*(i|j|k|cnt|temp|buf|ret|tmp)\s*[=;\[]/
-                );
+                // Match non-static globals: single or comma-separated (int i, j, k;)
+                const declRe = /^(?!.*static)(?!.*typedef)(?!.*extern)\s*(?:volatile\s+|const\s+|unsigned\s+)*(int|float|char|double|u8|u16|u32|uint8_t|uint16_t|uint32_t|bool)\s*\**\s*/;
+                const m = lineToCheck.match(declRe);
                 if (m) {
-                    issues.push({
-                        id: 'B15',
-                        pattern: 'file_scope_global',
-                        severity: 'HIGH',
-                        file: filePath,
-                        line: i + 1,
-                        detail: `Non-static global '${m[2]}' at file scope — should be static`
-                    });
+                    // After the type prefix, extract all variable names: i, j, k or buf[256] or temp
+                    const rest = lineToCheck.slice(m[0].length);
+                    const varRe = /\b(i|j|k|cnt|temp|buf|ret|tmp)\s*[=;\[,]/g;
+                    let vm;
+                    while ((vm = varRe.exec(rest)) !== null) {
+                        issues.push({
+                            id: 'B15',
+                            pattern: 'file_scope_global',
+                            severity: 'HIGH',
+                            file: filePath,
+                            line: i + 1,
+                            detail: `Non-static global '${vm[1]}' at file scope — should be static`
+                        });
+                    }
                 }
             }
         }
