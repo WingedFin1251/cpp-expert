@@ -39,6 +39,20 @@ Before applying any rules, identify the language using file extension and code c
 
 **If C++ code:** Apply all sections fully.
 
+### Attention Budget Guide (v1.4 — MANDATORY)
+This section defines how to allocate your limited context attention.
+
+| Stage | Budget | Focus | Constraint |
+|-------|--------|-------|------------|
+| 0. Preprocessing | 0% | Run `node scripts/run-preaudit.js` | Mechanical, no AI reading |
+| 1. Micro Logic | 70% | Single-function semantics | Do NOT read pre-audit JSON |
+| 2. Macro Verdict | 30% | Cross-file architecture | Read ONLY `unified-audit-report.json` |
+
+**Rules:**
+- In Stage 1, do NOT think about GPIO conflicts, ISR priorities, or control chains
+- In Stage 2, do NOT re-read raw GPIO/ISR/DMA init code — the JSON is the sole source of truth
+- If `unified-audit-report.json` does not exist → degradation mode: guide user manually
+
 ## 1. Memory Safety
 
 **Impact: CRITICAL | Category: memory-safety | Tags:** pointers, leaks, buffer-overflow

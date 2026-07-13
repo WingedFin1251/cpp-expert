@@ -18,3 +18,4 @@ Thumbs.db
 compile_commands.json
 build/
 cmake-build-*/
+unified-audit-report.json

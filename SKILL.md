@@ -47,13 +47,27 @@ Before any review, determine whether the target code is **C** or **C++**:
 
 ## Development Process
 
-### 0. **Two-Stage Deep Review** (v1.3 — MANDATORY)
-Execute **Stage 1** completely, then **Stage 2**. Do NOT mix them — mixing causes
-attention dilution and missed bugs.
+### 0. **Three-Stage Deep Review** (v1.4 — MANDATORY)
+Execute **Pre-stage → Stage 1 → Stage 2** in order. Do NOT skip the pre-stage
+when Node.js is available — it reduces Stage 2 token cost by ~93%.
 
 ---
 
-### STAGE 1: Micro Logic Scan (逐函数语义推演)
+### PRE-STAGE: Tool Preprocessing (0% AI budget)
+Run the pre-audit script to generate structured hardware conflict data:
+
+```bash
+node scripts/run-preaudit.js --include-dir Src/
+# → writes unified-audit-report.json
+```
+
+**Degradation mode:** If `unified-audit-report.json` does not exist (Node.js
+unavailable), fall back to manual guidance: "Please check Src/pwm.c line 42 for
+AF configuration conflicts."
+
+---
+
+### STAGE 1: Micro Logic Scan (70% AI budget)
 
 **Focus:** Single-file, single-function logic. **No cross-file thinking yet.**
 **Mental model:** You have never seen this code before. Read each function
@@ -77,11 +91,19 @@ Uninitialized variables, integer overflow, strict aliasing, missing virtual dest
 
 ---
 
-### STAGE 2: Macro Architecture Scan (跨文件系统审查)
+### STAGE 2: Macro Architecture Verdict (30% AI budget)
 
-**Now** you may think across files — call graphs, pin conflicts, interrupt priorities.
+**Do NOT re-read raw GPIO/ISR/DMA init code. Read `unified-audit-report.json` instead.**
+If the JSON is unavailable, fall back to manual guidance (degradation mode).
 
-### 6. **Execution Path Tracing** (MANDATORY — v1.2)
+### 6. **Read Pre-audit Report** (MANDATORY — v1.4)
+Load `unified-audit-report.json` — it is the sole source of truth for:
+- GPIO pin conflicts (pin_conflicts)
+- Control chain breaks (control_chain_breaks)
+- ISR stack depth risks (stack_overflow_risks)
+Cross-reference against Stage 1 findings in the final report.
+
+### 7. **Execution Path Tracing** (MANDATORY — v1.2)
 Locate `main()` or entry function. Build call graph. Dead code → 🟡 MEDIUM max.
 Exception: ISR handlers in vector table are always "alive".
 
@@ -106,6 +128,7 @@ Execute `run-static-analysis.sh` and optionally `run-sanitizers.sh`.
 
 | Stage | Priority | Dimension | Key Checks |
 |-------|----------|-----------|------------|
+| **0** | ⚙️ MANDATORY | Pre-audit (v1.4) | Run `node scripts/run-preaudit.js` → read unified-audit-report.json |
 | **1** | ⚙️ MANDATORY | Language Detection | C vs C++, extensions, std libs |
 | **1** | 🔴 CRITICAL | C Semantics (v1.3) | Pass-by-value traps, volatile, array bounds, variable shadowing |
 | **1** | 🔴 CRITICAL | Memory Safety | Smart pointers, leaks, buffer overflows, dangling |
