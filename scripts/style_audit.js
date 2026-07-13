@@ -31,9 +31,9 @@ function hasContext(lines, idx, keywords, range = 10) {
     return false;
 }
 
-function detectSentinelAssignments(content, filePath) {
+function detectSentinelAssignments(strippedContent, filePath) {
     const issues = [];
-    const lines = content.split('\n');
+    const lines = strippedContent.split('\n');
     for (let i = 0; i < lines.length; i++) {
         const m = lines[i].match(/(\w+)\[(\d+)\]\s*=\s*\w+\[\s*[^\]]+\]/);
         if (m && m[2] === '0' && hasContext(lines, i, SORT_KEYWORDS)) {
@@ -50,16 +50,15 @@ function detectSentinelAssignments(content, filePath) {
     return issues;
 }
 
-function detectEXTIFilePlacement(content, filePath) {
+function detectEXTIFilePlacement(strippedContent, filePath) {
     const issues = [];
     const fileName = path.basename(filePath);
-
-    // Skip files that are expected to contain EXTI code
     if (/^(bsp_exti|exti|stm32.*it|gpio)/i.test(fileName)) return issues;
 
-    // Match EXTI-specific init functions (NOT generic NVIC priority setting)
-    const hasEXTIInit = /\b(HAL_EXTI_Init|EXTI_Init)\s*\(/.test(content);
-    const hasEXTIPriority = /\bHAL_NVIC_SetPriority\s*\(\s*EXTI[0-9]*_IRQn/.test(content);
+    // Match EXTI-specific init functions
+    const hasEXTIInit = /\b(HAL_EXTI_Init|EXTI_Init)\s*\(/.test(strippedContent);
+    // Use \w+ to support EXTI9_5_IRQn and cross-line calls
+    const hasEXTIPriority = /\bHAL_NVIC_SetPriority\s*\(\s*EXTI\w+_IRQn/.test(strippedContent);
 
     if (hasEXTIInit || hasEXTIPriority) {
         issues.push({
@@ -74,32 +73,25 @@ function detectEXTIFilePlacement(content, filePath) {
     return issues;
 }
 
-function detectFileScopeGlobals(content, filePath) {
+function detectFileScopeGlobals(rawContent, strippedContent, filePath) {
     const issues = [];
-    // Strip comments and strings BEFORE brace counting to prevent interference
-    const stripped = content
-        .replace(/\/\*[\s\S]*?\*\//g, '')
-        .replace(/\/\/.*/g, '')
-        .replace(/"[^"]*"/g, '""')
-        .replace(/'[^']*'/g, "''");
-    const strippedLines = stripped.split('\n');
-    const rawLines = content.split('\n');
+    const strippedLines = strippedContent.split('\n');
+    const rawLines = rawContent.split('\n');
 
     let braceDepth = 0;
     for (let i = 0; i < rawLines.length; i++) {
-        const rawLine = rawLines[i];
         const cleanLine = strippedLines[i];
 
-        // Count braces in this line (clean = no comment/string interference)
         const opens = (cleanLine.match(/{/g) || []).length;
         const closes = (cleanLine.match(/}/g) || []).length;
 
-        // Only check for globals when at file scope (depth 0)
         if (braceDepth === 0) {
-            // Use cleanLine (comment/string stripped) to avoid false positives on comments/#defines
             const lineToCheck = cleanLine.trim();
             if (lineToCheck && !lineToCheck.startsWith('#')) {
-                const m = lineToCheck.match(/^(?!.*static)\s*(int|float|char|double|uint8_t|uint16_t|uint32_t)\s+(i|j|k|cnt|temp|buf|ret|tmp)\s*[=;\[]/);
+                // Support const/volatile/unsigned prefixes, pointer (*), exclude typedef/extern
+                const m = lineToCheck.match(
+                    /^(?!.*static)(?!.*typedef)(?!.*extern)\s*(?:volatile\s+|const\s+|unsigned\s+)*(int|float|char|double|uint8_t|uint16_t|uint32_t)\s*\**\s*(i|j|k|cnt|temp|buf|ret|tmp)\s*[=;\[]/
+                );
                 if (m) {
                     issues.push({
                         id: 'B15',
@@ -118,14 +110,24 @@ function detectFileScopeGlobals(content, filePath) {
     return issues;
 }
 
+function stripContent(content) {
+    // Strip strings first, then comments — preserving newlines in block comments
+    return content
+        .replace(/"(?:\\.|[^"\\])*"/g, '""')
+        .replace(/'(?:\\.|[^'\\])*'/g, "''")
+        .replace(/\/\*[\s\S]*?\*\//g, m => m.replace(/[^\n]/g, ''))
+        .replace(/\/\/.*/g, '');
+}
+
 function main(dir) {
     const files = collectFiles(dir);
     const issues = [];
     for (const f of files) {
         const content = fs.readFileSync(f, 'utf-8');
-        issues.push(...detectSentinelAssignments(content, f));
-        issues.push(...detectEXTIFilePlacement(content, f));
-        issues.push(...detectFileScopeGlobals(content, f));
+        const stripped = stripContent(content);
+        issues.push(...detectSentinelAssignments(stripped, f));
+        issues.push(...detectEXTIFilePlacement(stripped, f));
+        issues.push(...detectFileScopeGlobals(content, stripped, f));
     }
     return issues;
 }
