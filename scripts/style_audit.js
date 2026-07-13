@@ -96,16 +96,20 @@ function detectFileScopeGlobals(content, filePath) {
 
         // Only check for globals when at file scope (depth 0)
         if (braceDepth === 0) {
-            const m = rawLine.match(/^(?!.*static)\s*(int|float|char|double|uint8_t|uint16_t|uint32_t)\s+(i|j|k|cnt|temp|buf|ret|tmp)\s*[=;]/);
-            if (m) {
-                issues.push({
-                    id: 'B15',
-                    pattern: 'file_scope_global',
-                    severity: 'HIGH',
-                    file: filePath,
-                    line: i + 1,
-                    detail: `Non-static global '${m[2]}' at file scope — should be static`
-                });
+            // Use cleanLine (comment/string stripped) to avoid false positives on comments/#defines
+            const lineToCheck = cleanLine.trim();
+            if (lineToCheck && !lineToCheck.startsWith('#')) {
+                const m = lineToCheck.match(/^(?!.*static)\s*(int|float|char|double|uint8_t|uint16_t|uint32_t)\s+(i|j|k|cnt|temp|buf|ret|tmp)\s*[=;]/);
+                if (m) {
+                    issues.push({
+                        id: 'B15',
+                        pattern: 'file_scope_global',
+                        severity: 'HIGH',
+                        file: filePath,
+                        line: i + 1,
+                        detail: `Non-static global '${m[2]}' at file scope — should be static`
+                    });
+                }
             }
         }
 
