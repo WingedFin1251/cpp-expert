@@ -77,8 +77,10 @@ cpp-expert/
     │                           # GPIO pin conflict scanner
     ├── ctrl_chain_check.js     # 控制链调用图分析 (支持 RTOS)
     │                           # Control chain call graph (RTOS-aware)
-    └── stack_depth_audit.js    # ISR 栈深度估算 (Cortex-M aware)
-                                # ISR stack depth estimator
+    ├── stack_depth_audit.js    # ISR 栈深度估算 (Cortex-M aware)
+    │                           # ISR stack depth estimator
+    └── style_audit.js          # v1.5 风格审计 (哨兵/EXTI 文件/全局变量)
+                                # v1.5 style auditor (sentinel/EXTI/globals)
 ```
 
 ---
@@ -219,6 +221,7 @@ node scripts/run-preaudit.js --include-dir Src/
 | `stack_overflow_risks` | stack_depth_audit.js | ISR 栈深度 → 🟠 HIGH/🟡 MEDIUM |
 
 ### 版本历史 / Version History
+- **v1.5** — 魔数规则 + static 强制 + style_audit.js（哨兵/EXTI 文件/全局变量），7 轮审查零漏报打靶 / Magic number rule + static enforcement + style_audit.js, 7 review rounds, zero false positives
 - **v1.4** — 工具辅助降维：4 Node.js 预扫描脚本（引脚冲突/控制链/栈深度）、三阶段流水线、JSON 总线报告 / Tool-assisted dimensionality reduction: 4 pre-audit scripts, three-stage pipeline, JSON bus report
 - **v1.3** — 双阶段审查工作流、C 语义陷阱规则（传值/volatile/数组越界）、修复 §4.5 位置 / Two-stage review workflow, C semantics trap rules, fix §4.5 position
 - **v1.2** — 执行路径追踪（死代码降级）、架构原子性白名单（Cortex-M4 32位对齐）、控制算法连续性审查、报告模板要求 Call Path / Execution path tracing, Cortex-M atomicity whitelist, control algorithm continuity, call-path in reports

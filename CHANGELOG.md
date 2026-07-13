@@ -1,5 +1,29 @@
 # cpp-expert 变更日志
 
+## [1.5.0] — 2026-07-13
+
+### 新增
+- 规则路线：AGENTS.md §5.7 魔数检测（B18）
+- 规则路线：AGENTS.md §6.1.1 文件作用域 static 强制（B15）
+- 脚本路线：scripts/style_audit.js（B16 哨兵赋值 / B17 EXTI 文件归属 / B15 全局变量）
+- AGENTS.md JSON 使用规则：新增 style_issues 字段消费映射表
+- AGENTS.md TOC：新增 6.1.1 和 Attention Budget Guide 条目
+
+### 修复（style_audit.js 经 7 轮审查）
+- 修复块注释跨行导致行号错位（保留换行符剥离）
+- 修复 braceDepth 被字符串/宏干扰（改用剥离后计数）
+- 修复 EXTI 正则误报 IRQHandler（精确匹配 Init 函数）
+- 修复 EXTI 正则不支持 EXTI9_5_IRQn 和跨行调用
+- 修复 NVIC 正则误报 SysTick（限定 EXTI*_IRQn）
+- 修复 B16 哨兵缺上下文过滤（±10 行+sort 关键词）
+- 修复 B15 检测使用 rawLine 导致注释误报（改用 cleanLine）
+- 修复 B15 正则缺 `[` 导致数组漏报（char buf[256]）
+- 修复 B15 正则缺 `*` 导致指针漏报（char* buf）
+- 修复 B15 正则缺 const/volatile/unsigned 前缀
+- 修复 B15 正则缺逗号导致 int i,j,k 漏报（多变量提取）
+- 修复 B15 类型列表缺 u8/u16/u32/bool
+- 修复 Windows 目录名大小写敏感（toLowerCase）
+
 ## [1.4.0] — 2026-07-13
 
 ### 新增
