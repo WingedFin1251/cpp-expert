@@ -77,7 +77,11 @@ function main(dir) {
         let inMacro = false;
         for (let i = 0; i < lines.length; i++) {
             const trimmed = lines[i].trim();
-            if (inMacro) { inMacro = trimmed.endsWith('\\'); continue; }
+            if (inMacro) {
+                inMacro = trimmed.endsWith('\\');
+                if (inMacro) continue; // still inside macro, skip
+                // else: macro ended, fall through to detect this line
+            }
             if (trimmed.startsWith('//') || trimmed.startsWith('#')) {
                 inMacro = trimmed.startsWith('#') && trimmed.endsWith('\\');
                 continue;
