@@ -7,12 +7,14 @@ const includeDirs = [];
 const defaultExcludes = ['drivers', 'middlewares', '.git', 'node_modules', 'build', 'debug', 'release', '.vscode'];
 const excludeDirs = [...defaultExcludes];
 
+let projectTypeOverride = '';
 for (let i = 0; i < args.length; i++) {
     if (args[i] === '--include-dir' && i + 1 < args.length && !args[i + 1].startsWith('--')) includeDirs.push(args[++i]);
     if (args[i] === '--exclude' && i + 1 < args.length && !args[i + 1].startsWith('--')) {
         const val = args[++i];
         if (!excludeDirs.includes(val.toLowerCase())) excludeDirs.push(val.toLowerCase());
     }
+    if (args[i] === '--project-type' && i + 1 < args.length) projectTypeOverride = args[++i];
 }
 
 // Support multiple --include-dir args; pass all as space-separated to sub-scripts
@@ -46,10 +48,17 @@ function runScript(name) {
 async function main() {
     const start = Date.now();
 
-    // Detect project type
+    // Detect project type (embedded vs app)
     const hasDrivers = fs.existsSync(path.join(rootDir, 'Drivers'));
     const hasPlatformIO = fs.existsSync(path.join(rootDir, 'platformio.ini'));
-    const isEmbedded = hasDrivers || hasPlatformIO;
+    const hasStdPeriph = fs.existsSync(path.join(rootDir, 'FWLIB')) && fs.existsSync(path.join(rootDir, 'CORE'));
+    const hasCMSIS = fs.existsSync(path.join(rootDir, 'CORE', 'core_cm4.h')) || fs.existsSync(path.join(rootDir, 'CORE', 'core_cm3.h'));
+    const hasSTM32Conf = fs.existsSync(path.join(rootDir, 'USER', 'main.c')) &&
+                         (fs.existsSync(path.join(rootDir, 'USER', 'stm32f4xx_conf.h')) ||
+                          fs.existsSync(path.join(rootDir, 'USER', 'stm32f10x_conf.h')));
+    const autoEmbedded = hasDrivers || hasPlatformIO || hasStdPeriph || hasCMSIS || hasSTM32Conf;
+    const isEmbedded = projectTypeOverride === 'embedded' ? true :
+                       projectTypeOverride === 'app' ? false : autoEmbedded;
     const isApp = !isEmbedded;
 
     console.error(`[preaudit] Project type: ${isEmbedded ? 'embedded' : 'app'}`);
