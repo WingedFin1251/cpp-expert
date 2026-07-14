@@ -65,7 +65,21 @@ async function main() {
                        projectTypeOverride === 'app' ? false : autoEmbedded;
     const isApp = !isEmbedded;
 
-    console.error(`[preaudit] Project type: ${isEmbedded ? 'embedded' : 'app'}`);
+    // Detect build system
+    const hasCMake = fs.existsSync(path.join(rootDir, 'CMakeLists.txt'));
+    const hasMakefile = fs.existsSync(path.join(rootDir, 'Makefile')) || fs.existsSync(path.join(rootDir, 'makefile'));
+    let buildSystem = 'unknown';
+    if (hasCMake) buildSystem = 'CMake';
+    else if (hasMakefile) buildSystem = 'Makefile';
+    else if (fs.existsSync(rootDir)) {
+        const files = fs.readdirSync(rootDir);
+        if (files.some(f => /\.uvprojx?$/i.test(f))) buildSystem = 'Keil';
+        else if (files.some(f => /\.ewp$/i.test(f))) buildSystem = 'IAR';
+    }
+
+    console.error(`[preaudit] Project type: ${isEmbedded ? 'embedded' : 'app'}, build: ${buildSystem}`);
+    if (!isEmbedded) console.error(`[preaudit] Skipped: pin_audit, ctrl_chain_check, stack_depth_audit (embedded only)`);
+    if (isEmbedded && !hasCMake && !hasMakefile) console.error(`[preaudit] build_audit skipped: no CMake/Makefile found`);
 
     // Project-specific scripts
     let pinConflicts = [], pinStatus = 'skipped';
@@ -92,6 +106,13 @@ async function main() {
         meta: {
             tool_version: '1.6.0', scan_time_ms: Date.now() - start,
             project_type: isEmbedded ? 'embedded' : 'app',
+            build_system: buildSystem,
+            build_info: {
+                cmake: hasCMake,
+                makefile: hasMakefile,
+                detected: buildSystem
+            },
+            skipped_modules: isEmbedded ? [] : ['pin_audit', 'ctrl_chain_check', 'stack_depth_audit'],
             excluded_dirs: [...new Set(excludeDirs)], target_dir: targetDir,
             modules: {
                 pin_audit: { status: pinStatus, findings: pinConflicts.length },
