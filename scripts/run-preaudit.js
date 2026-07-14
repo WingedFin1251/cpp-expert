@@ -45,7 +45,7 @@ async function main() {
     const hasCMake = fs.existsSync(path.join(rootDir, 'CMakeLists.txt'));
     const hasMakefile = fs.existsSync(path.join(rootDir, 'Makefile'));
     const isEmbedded = hasDrivers || hasPlatformIO;
-    const isApp = hasCMake || hasMakefile || (!isEmbedded && !hasPlatformIO);
+    const isApp = !isEmbedded;
 
     console.error(`[preaudit] Project type: ${isEmbedded ? 'embedded' : 'app'}`);
 

@@ -40,10 +40,11 @@ function main(dir) {
         for (let i = 0; i < strippedLines.length; i++) {
             const line = strippedLines[i];
 
-            // B31: Unchecked I/O — check surrounding context for if()
+            // B31: Unchecked I/O — check surrounding context for if() or assignment
             if (/\b(fwrite|fread|chmod)\s*\(/.test(line)) {
                 const context = strippedLines.slice(Math.max(0, i - 3), i + 1).join('\n');
-                if (!/if\s*\(/.test(context) && !line.trim().startsWith('if')) {
+                const hasAssignment = /\b\w+\s*=\s*(fwrite|fread|chmod)\s*\(/.test(line);
+                if (!/if\s*\(/.test(context) && !line.trim().startsWith('if') && !hasAssignment) {
                     issues.push({
                         id: 'B31', severity: 'HIGH', pattern: 'unchecked_io',
                         file: f, line: i + 1,
@@ -51,10 +52,10 @@ function main(dir) {
                     });
                 }
             }
-            // B32: Non-blocking waitpid without retry loop
+            // B32: Non-blocking waitpid without retry loop (scan up AND down)
             if (/waitpid\s*\([^)]*WNOHANG/.test(line)) {
-                const ctx = strippedLines.slice(Math.max(0, i - 10), i).join(' ');
-                if (!/\b(for|while)\b/.test(ctx)) {
+                const ctx = strippedLines.slice(Math.max(0, i - 10), i + 6).join(' ');
+                if (!/\b(for|while|do)\b/.test(ctx)) {
                     issues.push({
                         id: 'B32', severity: 'HIGH', pattern: 'zombie_risk',
                         file: f, line: i + 1,
@@ -78,11 +79,11 @@ function main(dir) {
                     detail: 'putenv with string literal — POSIX may modify the string'
                 });
             }
-            // B36: dlopen
+            // B36: dlopen heuristic
             if (/\bdlopen\s*\(/.test(line)) issues.push({
                 id: 'B36', severity: 'MEDIUM', pattern: 'dlopen_leak',
                 file: f, line: i + 1,
-                detail: 'dlopen() without matching dlclose()'
+                detail: 'dlopen() used — verify matching dlclose() to prevent resource leaks'
             });
             // Note: deprecated C API detection (sprintf/strcpy/gets) is handled by api_style_audit.js → B35
         }

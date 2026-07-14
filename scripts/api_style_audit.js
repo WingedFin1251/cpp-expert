@@ -54,7 +54,10 @@ function main(dir) {
             const name = m[1];
             if (/^(true|false|NULL|NULLPTR|__FILE__|__LINE__|__DATE__)$/i.test(name)) continue;
             if (isVariadic(allContent, name)) continue;
-            const args = m[2].split(',').length;
+            const argsStr = m[2];
+            // Skip if args contain unbalanced nested parens — regex truncated
+            if (argsStr.includes('(') && !argsStr.includes(')')) continue;
+            const args = argsStr.split(',').length;
             if (!callStats[name]) callStats[name] = {};
             if (!callStats[name][args]) callStats[name][args] = [];
             const lineNum = content.substring(0, m.index).split('\n').length;
