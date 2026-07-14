@@ -49,13 +49,16 @@ function main(dir) {
                 const context = strippedLines.slice(Math.max(0, i - 3), i + 1).join('\n');
                 const hasAssignment = /\b\w+\s*=\s*(fwrite|fread|chmod)\s*\(/.test(context);
                 const hasVoidCast = /\(\s*void\s*\)\s*(fwrite|fread|chmod)\s*\(/.test(line);
-                // fwrite inside condition: if (fwrite(...) > 0) — true control flow check
-                const inCondition = /\b(if|while|for|switch|return)\s*\([^)]*\b(fwrite|fread|chmod)\s*\(/.test(line);
-                // Multi-line condition: if (x && \n fwrite(...)) — check prev + context
+                // fwrite inside condition: use parens counting to handle nested ()
+                const inCondition = /\b(if|while|for|switch|return)\b[^\n]*\b(fwrite|fread|chmod)\s*\(/.test(line) &&
+                    (line.match(/\(/g) || []).length > (line.match(/\)/g) || []).length;
+                // Multi-line condition: check prev + context, use parens balance
                 const prevLine = (strippedLines[i - 1] || '').trim();
                 const multiLineContext = strippedLines.slice(Math.max(0, i - 5), i).join('\n');
+                const openP = (multiLineContext.match(/\(/g) || []).length;
+                const closeP = (multiLineContext.match(/\)/g) || []).length;
                 const inMultilineCondition = prevLine.endsWith('&&') || prevLine.endsWith('||') ||
-                    /\b(if|while|for|switch)\s*\([^)]*$/.test(multiLineContext);
+                    (openP > closeP && /\b(if|while|for|switch)\b/.test(multiLineContext));
                 if (!inCondition && !inMultilineCondition && !hasAssignment && !hasVoidCast) {
                     issues.push({
                         id: 'B31', severity: 'HIGH', pattern: 'unchecked_io',

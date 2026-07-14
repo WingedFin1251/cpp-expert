@@ -41,7 +41,6 @@ function runScript(name) {
 
 async function main() {
     const start = Date.now();
-    const relDir = targetDir;
 
     // Detect project type
     const hasDrivers = fs.existsSync(path.join(rootDir, 'Drivers'));
