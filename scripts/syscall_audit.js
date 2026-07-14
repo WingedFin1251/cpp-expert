@@ -50,7 +50,10 @@ function main(dir) {
                 const hasVoidCast = /\(\s*void\s*\)\s*(fwrite|fread|chmod)\s*\(/.test(line);
                 // fwrite inside condition: if (fwrite(...) > 0) — true control flow check
                 const inCondition = /\b(if|while|for|switch|return)\s*\([^)]*\b(fwrite|fread|chmod)\s*\(/.test(line);
-                if (!inCondition && !hasAssignment && !hasVoidCast) {
+                // Multi-line condition: if (x && \n fwrite(...))
+                const prevContext = strippedLines.slice(Math.max(0, i - 5), i).join('\n');
+                const inMultilineCondition = /\b(if|while|for|switch)\s*\([^)]*$/.test(prevContext);
+                if (!inCondition && !inMultilineCondition && !hasAssignment && !hasVoidCast) {
                     issues.push({
                         id: 'B31', severity: 'HIGH', pattern: 'unchecked_io',
                         file: f, line: i + 1,

@@ -54,6 +54,12 @@ function main(dir) {
             const name = m[1];
             if (/^(true|false|NULL|NULLPTR|__FILE__|__LINE__|__DATE__)$/i.test(name)) continue;
             if (isVariadic(allContent, name)) continue;
+            // Skip #define lines (macro definition, not a call)
+            const lineStart = content.lastIndexOf('\n', m.index) + 1;
+            const lineText = content.substring(lineStart, m.index).trim();
+            if (lineText.startsWith('#define')) continue;
+            // Skip function pointer declarations: void (*NAME)(params)
+            if (/\(\s*\*\s*\w+\s*\)\s*\(/.test(m[0])) continue;
             const argsStr = m[2];
             // Skip if args contain nested parens (regex truncated by [^)]*)
             if (argsStr.includes('(')) continue;
