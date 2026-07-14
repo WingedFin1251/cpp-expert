@@ -72,7 +72,8 @@ function extractSources(cmakeContent, cmakeDir) {
     while ((m = auxRe.exec(cleaned)) !== null) {
         const args = m[1].split(/\s+/).filter(Boolean);
         if (args.length >= 1) {
-            addDirSources(path.resolve(cmakeDir, args[0]), cmakeDir, sources);
+            const expandedDir = expandVariables(args[0], varMap);
+            if (expandedDir) addDirSources(path.resolve(cmakeDir, expandedDir), cmakeDir, sources);
         }
     }
 

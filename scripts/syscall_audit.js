@@ -42,11 +42,13 @@ function main(dir) {
         for (let i = 0; i < strippedLines.length; i++) {
             const line = strippedLines[i];
 
-            // B31: Unchecked I/O — check surrounding context for if() or assignment
+            // B31: Unchecked I/O — check surrounding context for control flow, assignment, or void cast
             if (/\b(fwrite|fread|chmod)\s*\(/.test(line)) {
                 const context = strippedLines.slice(Math.max(0, i - 3), i + 1).join('\n');
                 const hasAssignment = /\b\w+\s*=\s*(fwrite|fread|chmod)\s*\(/.test(line);
-                if (!/if\s*\(/.test(context) && !line.trim().startsWith('if') && !hasAssignment) {
+                const hasVoidCast = /\(\s*void\s*\)\s*(fwrite|fread|chmod)\s*\(/.test(line);
+                const inControlFlow = /\b(if|while|for|switch|return)\s*\(/.test(context);
+                if (!inControlFlow && !line.trim().startsWith('if') && !hasAssignment && !hasVoidCast) {
                     issues.push({
                         id: 'B31', severity: 'HIGH', pattern: 'unchecked_io',
                         file: f, line: i + 1,
