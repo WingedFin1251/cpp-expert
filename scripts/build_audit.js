@@ -76,9 +76,10 @@ function addDirSources(dir, cmakeDir, sources) {
     }
 }
 
-function extractSources(cmakeContent, cmakeDir) {
+function extractSources(cmakeContent, cmakeDir, externalVarMap) {
     const sources = new Set();
-    const varMap = collectVariables(cmakeContent);
+    const localVars = collectVariables(cmakeContent);
+    const varMap = externalVarMap ? Object.assign({}, externalVarMap, localVars) : localVars;
     // Strip strings BEFORE comments to preserve # inside strings
     const noStrings = cmakeContent.replace(/"[^"]*"/g, '""');
     const cleaned = noStrings.replace(/#.*$/gm, '');
@@ -121,10 +122,14 @@ function extractSources(cmakeContent, cmakeDir) {
 
 function main(dir) {
     const cmakeFiles = findCMakeFiles(dir);
+    // Sort by depth so parent dirs are parsed before subdirs (variable inheritance)
+    cmakeFiles.sort((a, b) => a.split(path.sep).length - b.split(path.sep).length);
     const compiledSources = new Set();
+    const globalVarMap = {};
     for (const cm of cmakeFiles) {
         const content = fs.readFileSync(cm, 'utf-8');
-        const s = extractSources(content, path.dirname(cm));
+        Object.assign(globalVarMap, collectVariables(content));
+        const s = extractSources(content, path.dirname(cm), globalVarMap);
         s.forEach(f => compiledSources.add(f));
     }
     const allSources = new Set(collectFiles(dir).map(f => path.resolve(f)));

@@ -50,9 +50,7 @@ function main(dir) {
                 const context = strippedLines.slice(Math.max(0, i - 3), i + 1).join('\n');
                 // hasAssignment: check for `=` before func with unclosed parens (covers all ops/casts)
                 const eqIdx = context.indexOf('=');
-                const hasAssignment = eqIdx >= 0 &&
-                    (context.substring(eqIdx, context.length).match(/\(/g) || []).length >
-                    (context.substring(eqIdx, context.length).match(/\)/g) || []).length;
+                const hasAssignment = /=\s*[\s\S]*?\b(fwrite|fread|chmod)\s*\(/.test(context) && !/==\s*[\s\S]*?\b(fwrite|fread|chmod)\s*\(/.test(context);
                 const hasVoidCast = /\(\s*void\s*\)\s*(fwrite|fread|chmod)\s*\(/.test(context);
                 // fwrite inside condition: check parens balance in PREFIX only
                 const prefix = line.substring(0, ioMatch.index);
@@ -73,9 +71,9 @@ function main(dir) {
                     });
                 }
             }
-            // B32: Non-blocking waitpid without retry loop (use context for cross-line)
+            // B32: Non-blocking waitpid without retry loop (cross-line via [\s\S]*?)
             const waitpidContext = strippedLines.slice(Math.max(0, i - 1), i + 3).join('\n');
-            if (/waitpid\s*\([^)]*WNOHANG/.test(waitpidContext) || /\bwaitpid\s*\([^)]*\n[^)]*WNOHANG/.test(waitpidContext)) {
+            if (/waitpid\s*\([\s\S]*?WNOHANG/.test(waitpidContext)) {
                 const ctx = strippedLines.slice(Math.max(0, i - 10), i + 6).join(' ');
                 if (!/\b(for|while|do)\b/.test(ctx)) {
                     issues.push({
