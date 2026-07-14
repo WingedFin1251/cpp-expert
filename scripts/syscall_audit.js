@@ -31,6 +31,7 @@ function main(dir) {
     const issues = [];
     let forkCount = 0, waitpidCount = 0;
     const forkFiles = new Set(), waitpidFiles = new Set();
+    const dlopenReported = new Set();
     let hasSigIgn = false;
 
     for (const f of files) {
@@ -81,12 +82,15 @@ function main(dir) {
                     detail: 'putenv with string literal — POSIX may modify the string'
                 });
             }
-            // B36: dlopen heuristic
-            if (/\bdlopen\s*\(/.test(line)) issues.push({
-                id: 'B36', severity: 'MEDIUM', pattern: 'dlopen_leak',
-                file: f, line: i + 1,
-                detail: 'dlopen() used — verify matching dlclose() to prevent resource leaks'
-            });
+            // B36: dlopen heuristic (dedup per file)
+            if (/\bdlopen\s*\(/.test(line) && !dlopenReported.has(f)) {
+                dlopenReported.add(f);
+                issues.push({
+                    id: 'B36', severity: 'MEDIUM', pattern: 'dlopen_leak',
+                    file: f, line: i + 1,
+                    detail: 'dlopen() used — verify matching dlclose() to prevent resource leaks'
+                });
+            }
             // Note: deprecated C API detection (sprintf/strcpy/gets) is handled by api_style_audit.js → B35
         }
 

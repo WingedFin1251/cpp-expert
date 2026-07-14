@@ -42,8 +42,6 @@ async function main() {
     // Detect project type
     const hasDrivers = fs.existsSync(path.join(rootDir, 'Drivers'));
     const hasPlatformIO = fs.existsSync(path.join(rootDir, 'platformio.ini'));
-    const hasCMake = fs.existsSync(path.join(rootDir, 'CMakeLists.txt'));
-    const hasMakefile = fs.existsSync(path.join(rootDir, 'Makefile'));
     const isEmbedded = hasDrivers || hasPlatformIO;
     const isApp = !isEmbedded;
 

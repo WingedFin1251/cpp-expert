@@ -65,10 +65,14 @@ function main(dir) {
             callStats[name][args].push(f + ':' + lineNum);
         }
 
-        // B35: Deprecated API detection (use stripped content to avoid comments)
+        // B35: Deprecated API detection (exclude C++ member calls like obj.sprintf)
         for (let i = 0; i < lines.length; i++) {
-            if (DEPRECATED_APIS.test(lines[i]) && !lines[i].trim().startsWith('//')) {
-                const api = lines[i].match(DEPRECATED_APIS)[1];
+            const m = lines[i].match(DEPRECATED_APIS);
+            if (m && !lines[i].trim().startsWith('//')) {
+                // Exclude if preceded by '.' (C++ member function call)
+                const prefix = lines[i].substring(0, m.index);
+                if (/\.\s*$/.test(prefix)) continue;
+                const api = m[1];
                 issues.push({
                     id: 'B35', severity: 'HIGH', pattern: 'deprecated_api',
                     file: f, line: i + 1,
