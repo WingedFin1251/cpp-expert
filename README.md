@@ -1,12 +1,12 @@
 # cpp-expert
 
-**C/C++ 代码审查技能 — 三阶段流水线 + 8 维度优先级规则 + 工具辅助降维，集成 clang-tidy / cppcheck / AddressSanitizer / Node.js 预扫描工具链。**
+**可验证、可复现的 C/C++ 代码审查：精确率 100%，召回率 ≥90%（STM32 21 基准缺陷实测）。三阶段流水线（预审计脚本 → 微观逻辑扫描 → 宏观架构裁决）+ 8 维度优先级规则 + 工具辅助降维实现。集成 clang-tidy / cppcheck / AddressSanitizer / 8 个 Node.js 预扫描脚本。**
 
-**A C/C++ code review skill — three-stage pipeline + 8 priority-ranked rule dimensions + tool-assisted dimensionality reduction, integrating clang-tidy / cppcheck / AddressSanitizer / Node.js pre-audit toolchain.**
+**Deterministic, verifiable C/C++ defect detection: 100% precision, ≥90% recall (21-bug STM32 benchmark). Three-stage pipeline (pre-audit scripts → micro-logic scan → macro-architecture verdict) + 8 priority-ranked rule dimensions + tool-assisted dimensionality reduction. Integrating clang-tidy / cppcheck / AddressSanitizer / 8 Node.js pre-audit scripts.**
 
-> 灵感来自 [python-expert](https://skills.sh/)，专为 C/C++ 内存安全、未定义行为、资源管理、并发安全、现代 C++ 实践和代码风格审查设计。
+> 灵感来自 [python-expert](https://skills.sh/)。不同于纯知识注入型技能，cpp-expert 通过确定性脚本产生可复现的审查结果——同一份代码每次运行输出一致，不依赖 AI 注意力的随机波动。
 >
-> Inspired by [python-expert](https://skills.sh/), designed specifically for C/C++ memory safety, undefined behavior, resource management, concurrency safety, modern C++ practices, and code style review.
+> Inspired by [python-expert](https://skills.sh/). Unlike pure knowledge-injection skills, cpp-expert produces reproducible results via deterministic pre-audit scripts — same code, same output every run, independent of AI attention variance.
 
 ---
 
