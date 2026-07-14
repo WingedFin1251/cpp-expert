@@ -11,7 +11,7 @@ function collectFiles(dirOrDirs) {
         const entries = fs.readdirSync(dir, { withFileTypes: true });
         for (const e of entries) {
             const full = path.join(dir, e.name);
-            if (e.isDirectory() && !IGNORE_DIRS.includes(e.name.toLowerCase())) collectFiles(full, results);
+            if (e.isDirectory() && !IGNORE_DIRS.includes(e.name.toLowerCase())) results.push(...collectFiles(full));
             else if (e.isFile() && /\.(c|cpp)$/i.test(e.name)) results.push(full);
         }
     }
@@ -84,12 +84,7 @@ function main(dir) {
                 file: f, line: i + 1,
                 detail: 'dlopen() without matching dlclose()'
             });
-            // B38: Deprecated API (using stripped content)
-            if (/\b(strcpy|sprintf|gets)\s*\(/.test(line)) issues.push({
-                id: 'B38', severity: 'HIGH', pattern: 'deprecated_api',
-                file: f, line: i + 1,
-                detail: line.match(/\b(strcpy|sprintf|gets)\b/)[1] + ' — use safer alternative'
-            });
+            // Note: deprecated C API detection (sprintf/strcpy/gets) is handled by api_style_audit.js → B35
         }
 
         const fk = (stripped.match(/\bfork\s*\(/g) || []).length;

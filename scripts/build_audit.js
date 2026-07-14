@@ -49,7 +49,7 @@ function extractSources(cmakeContent, cmakeDir) {
     const cleaned = cmakeContent.replace(/#.*$/gm, '');
 
     const patterns = [
-        /(?:add_library|add_executable)\s*\(\s*\w+(?:\s+\w+)?\s+([^)]+)\)/g,
+        /(?:add_library|add_executable)\s*\(\s*([^)]+)\)/g,
         /target_sources\s*\(\s*\w+\s+(?:PRIVATE|PUBLIC|INTERFACE)?\s+([^)]+)\)/g,
     ];
 

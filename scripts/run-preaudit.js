@@ -23,7 +23,7 @@ function runScript(name) {
             console.error(`[preaudit] WARNING: ${name} not found, skipping`);
             return resolve({ findings: [], status: 'skipped' });
         }
-        execFile(process.execPath, [scriptPath, targetDir], { cwd: rootDir, maxBuffer: 1024 * 1024 }, (err, stdout, stderr) => {
+        execFile(process.execPath, [scriptPath, targetDir], { cwd: rootDir, maxBuffer: 10 * 1024 * 1024 }, (err, stdout, stderr) => {
             if (err) {
                 console.error(`[preaudit] ERROR running ${name}: ${err.message}`);
                 return resolve({ findings: [], status: 'error' });
@@ -41,12 +41,10 @@ async function main() {
 
     // Detect project type
     const hasDrivers = fs.existsSync(path.join(rootDir, 'Drivers'));
-    const hasSTM32Headers = ['stm32f4xx_hal.h','stm32f1xx_hal.h','stm32h7xx_hal.h','stm32g0xx_hal.h','stm32g4xx_hal.h']
-        .some(h => fs.existsSync(path.join(rootDir, relDir, h)));
-    const hasCMake = fs.existsSync(path.join(rootDir, 'CMakeLists.txt'));
     const hasPlatformIO = fs.existsSync(path.join(rootDir, 'platformio.ini'));
+    const hasCMake = fs.existsSync(path.join(rootDir, 'CMakeLists.txt'));
     const hasMakefile = fs.existsSync(path.join(rootDir, 'Makefile'));
-    const isEmbedded = (hasDrivers && hasSTM32Headers) || hasPlatformIO;
+    const isEmbedded = hasDrivers || hasPlatformIO;
     const isApp = hasCMake || hasMakefile || (!isEmbedded && !hasPlatformIO);
 
     console.error(`[preaudit] Project type: ${isEmbedded ? 'embedded' : 'app'}`);

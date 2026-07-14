@@ -12,7 +12,7 @@ function collectFiles(dirOrDirs) {
         const entries = fs.readdirSync(dir, { withFileTypes: true });
         for (const e of entries) {
             const full = path.join(dir, e.name);
-            if (e.isDirectory() && !IGNORE_DIRS.includes(e.name.toLowerCase())) collectFiles(full, results);
+            if (e.isDirectory() && !IGNORE_DIRS.includes(e.name.toLowerCase())) results.push(...collectFiles(full));
             else if (e.isFile() && /\.(c|cpp|h|hpp)$/i.test(e.name)) results.push(full);
         }
     }
@@ -57,7 +57,7 @@ function main(dir) {
             const args = m[2].split(',').length;
             if (!callStats[name]) callStats[name] = {};
             if (!callStats[name][args]) callStats[name][args] = [];
-            const lineNum = lines.indexOf(m[0]);
+            const lineNum = content.substring(0, m.index).split('\n').length;
             callStats[name][args].push(f + ':' + (lineNum >= 0 ? lineNum + 1 : 1));
         }
 
