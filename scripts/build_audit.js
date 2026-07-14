@@ -77,7 +77,9 @@ function addDirSources(dir, cmakeDir, sources) {
 function extractSources(cmakeContent, cmakeDir) {
     const sources = new Set();
     const varMap = collectVariables(cmakeContent);
-    const cleaned = cmakeContent.replace(/#.*$/gm, '');
+    // Strip strings BEFORE comments to preserve # inside strings
+    const noStrings = cmakeContent.replace(/"[^"]*"/g, '""');
+    const cleaned = noStrings.replace(/#.*$/gm, '');
 
     // aux_source_directory(dir VAR) — all sources in dir are compiled
     let m;
@@ -85,7 +87,7 @@ function extractSources(cmakeContent, cmakeDir) {
     while ((m = auxRe.exec(cleaned)) !== null) {
         const args = m[1].split(/\s+/).filter(Boolean);
         if (args.length >= 1) {
-            const expandedDir = expandVariables(args[0], varMap);
+            const expandedDir = expandVariables(args[0].replace(/^"|"$/g, ''), varMap);
             if (expandedDir) addDirSources(path.resolve(cmakeDir, expandedDir), cmakeDir, sources);
         }
     }

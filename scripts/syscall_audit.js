@@ -48,7 +48,7 @@ function main(dir) {
             const ioMatch = line.match(/\b(fwrite|fread|chmod)\s*\(/);
             if (ioMatch) {
                 const context = strippedLines.slice(Math.max(0, i - 3), i + 1).join('\n');
-                const hasAssignment = /\b\w+\s*=\s*(?:[\w\s()*])*(fwrite|fread|chmod)\s*\(/.test(context);
+                const hasAssignment = /\b\w+\s*=\s*(?:[\w\s()*+?:!>-])*(fwrite|fread|chmod)\s*\(/.test(context);
                 const hasVoidCast = /\(\s*void\s*\)\s*(fwrite|fread|chmod)\s*\(/.test(context);
                 // fwrite inside condition: check parens balance in PREFIX only
                 const prefix = line.substring(0, ioMatch.index);
@@ -58,7 +58,7 @@ function main(dir) {
                 // Multi-line condition: find LAST control keyword, count parens from there
                 const multiLineContext = strippedLines.slice(Math.max(0, i - 5), i).join('\n');
                 // Match last control keyword and everything after it
-                const ctrlMatch = multiLineContext.match(/[\s\S]*\b(if|while|for|switch)\b([\s\S]*)$/i);
+                const ctrlMatch = multiLineContext.match(/[\s\S]*\b(if|while|for|switch|return)\b([\s\S]*)$/i);
                 const inMultilineCondition = ctrlMatch !== null &&
                     ((ctrlMatch[2].match(/\(/g) || []).length > (ctrlMatch[2].match(/\)/g) || []).length);
                 if (!inCondition && !inMultilineCondition && !hasAssignment && !hasVoidCast) {
@@ -69,8 +69,9 @@ function main(dir) {
                     });
                 }
             }
-            // B32: Non-blocking waitpid without retry loop (scan up AND down)
-            if (/waitpid\s*\([^)]*WNOHANG/.test(line)) {
+            // B32: Non-blocking waitpid without retry loop (use context for cross-line)
+            const waitpidContext = strippedLines.slice(Math.max(0, i - 1), i + 3).join('\n');
+            if (/waitpid\s*\([^)]*WNOHANG/.test(waitpidContext) || /\bwaitpid\s*\([^)]*\n[^)]*WNOHANG/.test(waitpidContext)) {
                 const ctx = strippedLines.slice(Math.max(0, i - 10), i + 6).join(' ');
                 if (!/\b(for|while|do)\b/.test(ctx)) {
                     issues.push({
@@ -115,8 +116,9 @@ function main(dir) {
         if (wp > 0) waitpidFiles.add(f);
     }
 
-    // Exempt SIGCHLD=SIG_IGN pattern (kernel auto-reaps children)
-    if (forkCount > waitpidCount && !hasSigIgn) {
+    // Exempt SIGCHLD=SIG_IGN and bulk-reap (while waitpid > 0)
+    const hasBulkReap = /\bwhile\b[\s\S]*\bwaitpid\s*\(/.test(stripped);
+    if (forkCount > waitpidCount && !hasSigIgn && !hasBulkReap) {
         issues.push({
             id: 'B37', severity: 'CRITICAL', pattern: 'fork_wait_mismatch',
             file: [...forkFiles][0] || '.', line: 1,

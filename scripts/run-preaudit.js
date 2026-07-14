@@ -4,18 +4,22 @@ const path = require('path');
 
 const args = process.argv.slice(2);
 const includeDirs = [];
-const excludeDirs = ['Drivers', 'Middlewares', '.git', 'node_modules', 'build', 'Debug', 'Release', '.vscode'];
+const defaultExcludes = ['drivers', 'middlewares', '.git', 'node_modules', 'build', 'debug', 'release', '.vscode'];
+const excludeDirs = [...defaultExcludes];
 
 for (let i = 0; i < args.length; i++) {
-    if (args[i] === '--include-dir' && i + 1 < args.length) includeDirs.push(args[++i]);
-    if (args[i] === '--exclude' && i + 1 < args.length) excludeDirs.push(args[++i]);
+    if (args[i] === '--include-dir' && i + 1 < args.length && !args[i + 1].startsWith('--')) includeDirs.push(args[++i]);
+    if (args[i] === '--exclude' && i + 1 < args.length && !args[i + 1].startsWith('--')) {
+        const val = args[++i];
+        if (!excludeDirs.includes(val.toLowerCase())) excludeDirs.push(val.toLowerCase());
+    }
 }
 
 // Support multiple --include-dir args; pass all as space-separated to sub-scripts
 const targetDir = includeDirs.length > 0 ? includeDirs.join(',') : '.';
-// Note: --exclude is recorded in report meta but NOT passed to sub-scripts (they use their own IGNORE_DIRS)
-if (excludeDirs.length > 0 && !excludeDirs.every(d => ['Drivers', 'Middlewares', '.git', 'node_modules', 'build', 'Debug', 'Release', '.vscode'].includes(d))) {
-    console.error('[preaudit] WARNING: Custom --exclude is recorded in meta only. Sub-scripts use built-in IGNORE_DIRS.');
+// --exclude is recorded in meta; sub-scripts use built-in IGNORE_DIRS
+if (excludeDirs.length > defaultExcludes.length) {
+    console.error('[preaudit] WARNING: Custom --exclude dir(s) recorded in meta only. Sub-scripts may not honor them.');
 }
 const rootDir = process.cwd();
 const scriptsDir = __dirname;
@@ -72,7 +76,7 @@ async function main() {
         meta: {
             tool_version: '1.6.0', scan_time_ms: Date.now() - start,
             project_type: isEmbedded ? 'embedded' : 'app',
-            excluded_dirs: excludeDirs, target_dir: targetDir,
+            excluded_dirs: [...new Set(excludeDirs)], target_dir: targetDir,
             modules: {
                 pin_audit: { status: isEmbedded ? 'ok' : 'skipped', findings: pinConflicts.length },
                 ctrl_chain: { status: isEmbedded ? 'ok' : 'skipped', findings: chainBreaks.length },
