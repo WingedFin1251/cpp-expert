@@ -1,5 +1,36 @@
 # cpp-expert 变更日志
 
+## [1.6.0] — 2026-07-14
+
+### 架构升级
+- 项目类型自动路由（嵌入式 vs 应用层），run-preaudit.js 根据 Drivers/CMakeLists 自动切换脚本集
+- 全场景覆盖：从"嵌入式专用"升级为"全场景 C/C++ 审计平台"
+
+### 新增（3 个脚本）
+- scripts/build_audit.js：CMake 构建系统审计（B30 孤儿文件检测），支持变量展开、list(APPEND)、aux_source_directory
+- scripts/syscall_audit.js：POSIX 系统调用审计（B31-B33, B36-B37），涵盖 fwrite/putenv/fork/dlopen 等
+- scripts/api_style_audit.js：跨文件 API 一致性审计（B34 宏参数不一致/b35 废弃 API）
+- AGENTS.md：新增 build_orphans/syscall_issues/api_mismatches 消费规则表
+- SKILL.md Bundled Resources：列出全部 8 个脚本
+
+### 修复（27 轮审查，70+ Bug）
+- 修复 collectFiles 递归参数失效导致子目录漏扫
+- 修复 CMake 变量展开（嵌套 `${}`、list(APPEND)、跨文件继承）
+- 修复 CMake 字符串内 `#` 和 `)` 干扰注释剥离
+- 修复 aux_source_directory 变量展开和引号路径
+- 修复 stripped 变量作用域崩溃（ReferenceError）
+- 修复 B31 hasAssignment 括号配平回归，改用赋值正则
+- 修复 B31 控制流上下文污染（if 块外误判）
+- 修复 B32 WNOHANG 跨多行漏报
+- 修复 B33 const_cast 独立分支误报非 putenv 场景
+- 修复 B37 SIGCHLD 精确匹配 + sigaction + 批量收割豁免
+- 修复 B34 宏定义行跳过（含空格 `#    define`、函数指针、跨行 `(*`）
+- 修复 B35 废弃 API 排除 C++`.`/`->`/`::` 前缀和跨行宏定义
+- 修复 Windows 路径大小写敏感（toLowerCase）
+- 修复 run-preaudit.js 去重、arg 校验、状态硬编码
+- 修复 api_style_audit.js 单引号正则结束符、空参宏、嵌套括号
+- 27 轮审查累计修复 70+ 个逻辑漏洞
+
 ## [1.5.0] — 2026-07-13
 
 ### 新增
