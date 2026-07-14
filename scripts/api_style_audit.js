@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 
 const IGNORE_DIRS = ['Drivers', 'Middlewares', '.git', 'node_modules', 'build', 'debug', 'release', 'cmake-build-debug', 'out'];
-const DEPRECATED_APIS = /\b(sprintf|strcpy|strcat|gets)\s*\(/;
+const DEPRECATED_APIS = /\b(sprintf|strcpy|strcat|gets)\s*\(/g;
 
 function collectFiles(dirOrDirs) {
     const results = [];
@@ -58,8 +58,8 @@ function main(dir) {
             const lineStart = content.lastIndexOf('\n', m.index) + 1;
             const lineText = content.substring(lineStart, m.index).trim();
             if (/^#\s*define/.test(lineText)) continue;
-            // Skip function pointer declarations: void (*NAME)(params)
-            if (/\(\s*\*\s*\w+\s*\)\s*\(/.test(m[0])) continue;
+            // Skip function pointer declarations: check line prefix for (*NAME)
+            if (/\(\s*\*\s*\w+\s*\)\s*$/.test(lineText)) continue;
             const argsStr = m[2];
             // Skip if args contain nested parens (regex truncated by [^)]*)
             if (argsStr.includes('(')) continue;
@@ -73,16 +73,16 @@ function main(dir) {
 
         // B35: Deprecated API detection (exclude C++ member calls like obj.sprintf)
         for (let i = 0; i < lines.length; i++) {
-            const m = lines[i].match(DEPRECATED_APIS);
-            if (m && !lines[i].trim().startsWith('//') && !lines[i].trim().startsWith('#')) {
+            if (lines[i].trim().startsWith('//') || lines[i].trim().startsWith('#')) continue;
+            const matches = [...lines[i].matchAll(DEPRECATED_APIS)];
+            for (const m of matches) {
                 // Exclude if preceded by '.', '->', or '::' (C++ member/namespace/ptr call)
                 const prefix = lines[i].substring(0, m.index);
                 if (/(?:\.|->|::)\s*$/.test(prefix)) continue;
-                const api = m[1];
                 issues.push({
                     id: 'B35', severity: 'HIGH', pattern: 'deprecated_api',
                     file: f, line: i + 1,
-                    detail: "Deprecated API '" + api + "' — use safer alternative"
+                    detail: "Deprecated API '" + m[1] + "' — use safer alternative"
                 });
             }
         }
