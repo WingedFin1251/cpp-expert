@@ -85,6 +85,15 @@ When `unified-audit-report.json` is present, you MUST use it as the **sole sourc
 - Output: "⚠️ Pre-audit unavailable. Based on Stage 1 scanning, potential GPIO/control issues noted at [general location]. Manual verification recommended."
 - Downgrade severity by one level when based solely on manual inspection.
 
+**Skipped Module Rules (v1.6.1 — MANDATORY):**
+- **Skipped != Passed**: If a module's status is `skipped` or `skipped_no_build_system`,
+  you MUST NOT conclude the code is safe in that aspect. The tool had a blind spot.
+- **Contextual Awareness**:
+  - If `build_audit` skipped (Keil/IAR): "Source compilation tracking was not performed
+    due to incompatible build system. Manual verification of source file inclusion in the
+    IDE project is recommended."
+  - If `syscall_audit` skipped (Embedded): Do not mention system call issues.
+
 ## 1. Memory Safety
 
 **Impact: CRITICAL | Category: memory-safety | Tags:** pointers, leaks, buffer-overflow

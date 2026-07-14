@@ -1,5 +1,27 @@
 # cpp-expert 变更日志
 
+## [1.6.1] — 2026-07-14
+
+### 新增
+- 项目类型检测扩展：支持 StdPeriph 库（FWLIB/CORE）、CMSIS core_cm4.h、Keil 经典结构
+- 构建系统检测：CMake/Makefile/Keil/IAR 自动识别，输出到 report.meta.build_system
+- 新增 `--project-type embedded|app` 手动覆盖参数
+- 新增 `meta.skipped_modules` 动态数组，AI 可读取被跳过的审计模块
+- 新增 `meta.build_info` 字段，包含构建系统详细信息
+- `--exclude` 参数通过 `PREAUDIT_EXCLUDE_DIRS` 环境变量传递至子脚本
+- SKILL.md/AGENTS.md：新增构建系统与审计范围报告区块
+- AGENTS.md：新增 Skipped Module Rules（跳过不等于通过）
+
+### 修复
+- 修复 `build_audit` 日志显示跳过但实际仍执行的问题
+- 修复 `skipped_modules` 硬编码为动态数组
+- 修复 `--project-type` 参数吞噬下一个参数的问题
+- 修复 FWLIB/CORE 目录大小写敏感（Linux/macOS 兼容）
+- 修复 Keil/IAR 非 CMake 项目孤儿文件误报
+
+### 改进
+- 控制台日志：输出项目类型、构建系统、跳过的模块
+
 ## [1.6.0] — 2026-07-14
 
 ### 架构升级

@@ -221,6 +221,7 @@ node scripts/run-preaudit.js --include-dir Src/
 | `stack_overflow_risks` | stack_depth_audit.js | ISR 栈深度 → 🟠 HIGH/🟡 MEDIUM |
 
 ### 版本历史 / Version History
+- **v1.6.1** — StdPeriph/CMSIS 检测、构建系统识别、`--project-type` 覆盖、`--exclude` 环境变量传递 / StdPeriph/CMSIS detection, build system ID, `--project-type` override, `--exclude` env-passing
 - **v1.6** — 全场景 C/C++ 审计平台：项目类型自动路由 + 3 新脚本（build/syscall/api_style），27 轮审查 70+ Bug 修复 / Full-scope C/C++ audit platform: project type routing + 3 new scripts, 27 review rounds, 70+ bug fixes
 - **v1.5** — 魔数规则 + static 强制 + style_audit.js（哨兵/EXTI 文件/全局变量），7 轮审查零漏报打靶 / Magic number rule + static enforcement + style_audit.js, 7 review rounds, zero false positives
 - **v1.4** — 工具辅助降维：4 Node.js 预扫描脚本（引脚冲突/控制链/栈深度）、三阶段流水线、JSON 总线报告 / Tool-assisted dimensionality reduction: 4 pre-audit scripts, three-stage pipeline, JSON bus report

@@ -56,14 +56,22 @@ when Node.js is available — it reduces Stage 2 token cost by ~93%.
 
 ### PRE-STAGE: Tool Preprocessing (0% AI budget)
 **MANDATORY — MUST run for ALL C/C++ projects if Node.js is available.**
-The script auto-detects project type (embedded/app). For app projects it runs
-build_audit, syscall_audit, and api_style_audit — catching dead code, unchecked
-I/O, API misuse, and more. Do NOT skip based on project type assumptions.
+The script auto-detects project type (embedded/app) and build system
+(CMake/Keil/IAR/etc.). For app projects it runs build_audit, syscall_audit,
+and api_style_audit — catching dead code, unchecked I/O, API misuse, and more.
+Do NOT skip based on project type assumptions.
 
 ```bash
 node scripts/run-preaudit.js --include-dir Src/
 # → writes unified-audit-report.json
 ```
+
+**CRITICAL PARSING RULES FOR AI:**
+When reading `unified-audit-report.json`, you MUST first check `meta`:
+1. **Build System**: Read `meta.build_system` (e.g., "CMake", "Keil", "IAR", "unknown").
+2. **Skipped Modules**: Read `meta.skipped_modules` array.
+3. **Do NOT claim "no issues found"** for modules listed in `skipped_modules` or
+   with status `skipped_no_build_system`. Explicitly state they were skipped.
 
 **Degradation mode:** If `unified-audit-report.json` does not exist (Node.js
 unavailable), fall back to manual guidance based on Stage 1 findings. Identify
@@ -162,5 +170,22 @@ Execute `run-static-analysis.sh` and optionally `run-sanitizers.sh`.
 - **scripts/api_style_audit.js** — v1.6 cross-file API consistency audit
 
 ## Code Review Output Format
+
+Reports MUST start with a build system & audit scope block:
+
+### 1. 🛠️ Build System & Audit Scope (MUST INCLUDE AT TOP)
+Based on `meta.build_system` and `meta.skipped_modules` from `unified-audit-report.json`:
+- **Detected Build System**: [CMake / Keil / IAR / Unknown]
+- **Project Type**: [Embedded / App]
+- **Audit Scope Notes**:
+  - List all skipped modules with reasons.
+  - Example: "⚠️ build_audit: Skipped (requires CMake/Makefile for source tracking)."
+  - If none skipped: "All applicable pre-audit modules executed successfully."
+
+### 2. Summary
+### 3. Critical Issues 🔴
+### 4. High Priority 🟠
+### 5. Medium Priority 🟡
+### 6. Tool Results
 
 See AGENTS.md for the full report template.
