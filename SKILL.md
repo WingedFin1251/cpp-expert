@@ -55,7 +55,10 @@ when Node.js is available — it reduces Stage 2 token cost by ~93%.
 ---
 
 ### PRE-STAGE: Tool Preprocessing (0% AI budget)
-Run the pre-audit script to generate structured hardware conflict data:
+**MANDATORY — MUST run for ALL C/C++ projects if Node.js is available.**
+The script auto-detects project type (embedded/app). For app projects it runs
+build_audit, syscall_audit, and api_style_audit — catching dead code, unchecked
+I/O, API misuse, and more. Do NOT skip based on project type assumptions.
 
 ```bash
 node scripts/run-preaudit.js --include-dir Src/

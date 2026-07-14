@@ -49,7 +49,7 @@ This section defines how to allocate your limited context attention.
 
 | Stage | Budget | Focus | Constraint |
 |-------|--------|-------|------------|
-| 0. Preprocessing | 0% | Run `node scripts/run-preaudit.js` | Mechanical, no AI reading |
+| 0. Preprocessing | 0% | Run `node scripts/run-preaudit.js` (ALL projects, script auto-detects type) | Mandatory if Node.js available |
 | 1. Micro Logic | 70% | Single-function semantics | Do NOT read pre-audit JSON |
 | 2. Macro Verdict | 30% | Cross-file architecture | Read ONLY `unified-audit-report.json` |
 
