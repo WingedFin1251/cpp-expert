@@ -1,8 +1,8 @@
 # cpp-expert
 
-**可验证、可复现的 C/C++ 代码审查：精确率 100%，召回率 ≥90%（STM32 21 基准缺陷实测）。三阶段流水线（预审计脚本 → 微观逻辑扫描 → 宏观架构裁决）+ 8 维度优先级规则 + 工具辅助降维实现。集成 clang-tidy / cppcheck / AddressSanitizer / 8 个 Node.js 预扫描脚本。**
+**可验证、可复现的 C/C++ 代码审查：精确率 100%，召回率 ≥85%（STM32 21 基准缺陷实测）。三阶段流水线（预审计脚本 → 微观逻辑扫描 → 宏观架构裁决）+ 8 维度优先级规则 + 工具辅助降维实现。集成 clang-tidy / cppcheck / AddressSanitizer / 8 个 Node.js 预扫描脚本。**
 
-**Deterministic, verifiable C/C++ defect detection: 100% precision, ≥90% recall (21-bug STM32 benchmark). Three-stage pipeline (pre-audit scripts → micro-logic scan → macro-architecture verdict) + 8 priority-ranked rule dimensions + tool-assisted dimensionality reduction. Integrating clang-tidy / cppcheck / AddressSanitizer / 8 Node.js pre-audit scripts.**
+**Deterministic, verifiable C/C++ defect detection: 100% precision, ≥85% recall (21-bug STM32 benchmark). Three-stage pipeline (pre-audit scripts → micro-logic scan → macro-architecture verdict) + 8 priority-ranked rule dimensions + tool-assisted dimensionality reduction. Integrating clang-tidy / cppcheck / AddressSanitizer / 8 Node.js pre-audit scripts.**
 
 > 灵感来自 [python-expert](https://skills.sh/)。不同于纯知识注入型技能，cpp-expert 通过确定性脚本产生可复现的审查结果——同一份代码每次运行输出一致，不依赖 AI 注意力的随机波动。
 >
