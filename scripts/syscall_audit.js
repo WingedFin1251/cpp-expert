@@ -37,7 +37,9 @@ function main(dir) {
     for (const f of files) {
         const raw = fs.readFileSync(f, 'utf-8');
         const stripped = stripContent(raw);
-        if (!hasSigIgn && /signal\s*\(\s*SIGCHLD\s*,\s*SIG_IGN\s*\)/.test(stripped)) hasSigIgn = true;
+        if (!hasSigIgn && (/signal\s*\(\s*SIGCHLD\s*,\s*SIG_IGN\s*\)/.test(stripped) ||
+            /\bsa_handler\s*=\s*SIG_IGN\b[\s\S]*?\bSIGCHLD\b/.test(stripped) ||
+            /\bSIGCHLD\b[\s\S]*?\bsa_handler\s*=\s*SIG_IGN\b/.test(stripped))) hasSigIgn = true;
         const strippedLines = stripped.split('\n');
 
         for (let i = 0; i < strippedLines.length; i++) {
@@ -50,9 +52,10 @@ function main(dir) {
                 const hasVoidCast = /\(\s*void\s*\)\s*(fwrite|fread|chmod)\s*\(/.test(line);
                 // fwrite inside condition: if (fwrite(...) > 0) — true control flow check
                 const inCondition = /\b(if|while|for|switch|return)\s*\([^)]*\b(fwrite|fread|chmod)\s*\(/.test(line);
-                // Multi-line condition: if (x && \n fwrite(...))
-                const prevContext = strippedLines.slice(Math.max(0, i - 5), i).join('\n');
-                const inMultilineCondition = /\b(if|while|for|switch)\s*\([^)]*$/.test(prevContext);
+                // Multi-line condition: if (x && \n fwrite(...)) — check ONLY prev line
+                const prevLine = (strippedLines[i - 1] || '').trim();
+                const inMultilineCondition = prevLine.endsWith('&&') || prevLine.endsWith('||') ||
+                    /\b(if|while|for|switch)\s*\([^)]*$/.test(prevLine);
                 if (!inCondition && !inMultilineCondition && !hasAssignment && !hasVoidCast) {
                     issues.push({
                         id: 'B31', severity: 'HIGH', pattern: 'unchecked_io',

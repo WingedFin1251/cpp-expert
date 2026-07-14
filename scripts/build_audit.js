@@ -91,7 +91,7 @@ function extractSources(cmakeContent, cmakeDir) {
                 if (!trimmed || trimmed === 'INTERFACE') return;
                 const expanded = expandVariables(trimmed, varMap);
                 expanded.split(/\s+/).forEach(exp => {
-                    const t = exp.trim();
+                    const t = exp.trim().replace(/^"|"$/g, '');
                     if (t && SRC_PATTERNS.some(p => t.endsWith(p))) {
                         sources.add(path.resolve(cmakeDir, t));
                     }
