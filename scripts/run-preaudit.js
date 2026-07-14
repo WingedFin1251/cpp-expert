@@ -78,8 +78,12 @@ async function main() {
     }
 
     console.error(`[preaudit] Project type: ${isEmbedded ? 'embedded' : 'app'}, build: ${buildSystem}`);
-    if (!isEmbedded) console.error(`[preaudit] Skipped: pin_audit, ctrl_chain_check, stack_depth_audit (embedded only)`);
-    if (isEmbedded && !hasCMake && !hasMakefile) console.error(`[preaudit] build_audit skipped: no CMake/Makefile found`);
+    const skippedModules = [];
+
+    if (!isEmbedded) {
+        skippedModules.push('pin_audit', 'ctrl_chain_check', 'stack_depth_audit');
+        console.error(`[preaudit] Skipped: pin_audit, ctrl_chain_check, stack_depth_audit (embedded only)`);
+    }
 
     // Project-specific scripts
     let pinConflicts = [], pinStatus = 'skipped';
@@ -93,8 +97,16 @@ async function main() {
         ({ findings: chainBreaks, status: chainStatus } = await runScript('ctrl_chain_check.js'));
         ({ findings: stackRisks, status: stackStatus } = await runScript('stack_depth_audit.js'));
     }
+
     if (isApp) {
-        ({ findings: buildOrphans, status: buildStatus } = await runScript('build_audit.js'));
+        const canRunBuildAudit = hasCMake || hasMakefile;
+        if (canRunBuildAudit) {
+            ({ findings: buildOrphans, status: buildStatus } = await runScript('build_audit.js'));
+        } else {
+            buildStatus = 'skipped_no_build_system';
+            skippedModules.push('build_audit');
+            console.error(`[preaudit] build_audit skipped: no CMake/Makefile found`);
+        }
         ({ findings: syscallIssues, status: syscallStatus } = await runScript('syscall_audit.js'));
     }
 
@@ -107,12 +119,8 @@ async function main() {
             tool_version: '1.6.0', scan_time_ms: Date.now() - start,
             project_type: isEmbedded ? 'embedded' : 'app',
             build_system: buildSystem,
-            build_info: {
-                cmake: hasCMake,
-                makefile: hasMakefile,
-                detected: buildSystem
-            },
-            skipped_modules: isEmbedded ? [] : ['pin_audit', 'ctrl_chain_check', 'stack_depth_audit'],
+            build_info: { cmake: hasCMake, makefile: hasMakefile, detected: buildSystem },
+            skipped_modules: skippedModules,
             excluded_dirs: [...new Set(excludeDirs)], target_dir: targetDir,
             modules: {
                 pin_audit: { status: pinStatus, findings: pinConflicts.length },
