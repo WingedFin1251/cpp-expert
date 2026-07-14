@@ -37,30 +37,61 @@ function runScript(name) {
 
 async function main() {
     const start = Date.now();
-    // Run sequentially (not Promise.all) per design spec — each script is independent
-    const { findings: pinConflicts, status: pinStatus } = await runScript('pin_audit.js');
-    const { findings: chainBreaks, status: chainStatus } = await runScript('ctrl_chain_check.js');
-    const { findings: stackRisks, status: stackStatus } = await runScript('stack_depth_audit.js');
-    const { findings: styleIssues, status: styleStatus } = await runScript('style_audit.js');
+    const relDir = targetDir;
+
+    // Detect project type
+    const hasDrivers = fs.existsSync(path.join(rootDir, 'Drivers'));
+    const hasSTM32Headers = ['stm32f4xx_hal.h','stm32f1xx_hal.h','stm32h7xx_hal.h','stm32g0xx_hal.h','stm32g4xx_hal.h']
+        .some(h => fs.existsSync(path.join(rootDir, relDir, h)));
+    const hasCMake = fs.existsSync(path.join(rootDir, 'CMakeLists.txt'));
+    const hasPlatformIO = fs.existsSync(path.join(rootDir, 'platformio.ini'));
+    const hasMakefile = fs.existsSync(path.join(rootDir, 'Makefile'));
+    const isEmbedded = (hasDrivers && hasSTM32Headers) || hasPlatformIO;
+    const isApp = hasCMake || hasMakefile || (!isEmbedded && !hasPlatformIO);
+
+    console.error(`[preaudit] Project type: ${isEmbedded ? 'embedded' : 'app'}`);
+
+    // Project-specific scripts
+    let pinConflicts = [], chainBreaks = [], stackRisks = [];
+    let buildOrphans = [], syscallIssues = [];
+
+    if (isEmbedded) {
+        ({ findings: pinConflicts } = await runScript('pin_audit.js'));
+        ({ findings: chainBreaks } = await runScript('ctrl_chain_check.js'));
+        ({ findings: stackRisks } = await runScript('stack_depth_audit.js'));
+    }
+    if (isApp || (!isEmbedded && !hasPlatformIO)) {
+        ({ findings: buildOrphans } = await runScript('build_audit.js'));
+        ({ findings: syscallIssues } = await runScript('syscall_audit.js'));
+    }
+
+    // Always run: common scripts
+    const { findings: styleIssues } = await runScript('style_audit.js');
+    const { findings: apiIssues } = await runScript('api_style_audit.js');
+
     const report = {
         meta: {
-            tool_version: '1.5.0',
-            scan_time_ms: Date.now() - start,
-            excluded_dirs: excludeDirs,
-            target_dir: targetDir,
+            tool_version: '1.6.0', scan_time_ms: Date.now() - start,
+            project_type: isEmbedded ? 'embedded' : 'app',
+            excluded_dirs: excludeDirs, target_dir: targetDir,
             modules: {
-                pin_audit: { status: pinStatus, findings: pinConflicts.length },
-                ctrl_chain: { status: chainStatus, findings: chainBreaks.length },
-                stack_depth: { status: stackStatus, findings: stackRisks.length },
-                style_audit: { status: styleStatus, findings: styleIssues.length }
+                pin_audit: { status: isEmbedded ? 'ok' : 'skipped', findings: pinConflicts.length },
+                ctrl_chain: { status: isEmbedded ? 'ok' : 'skipped', findings: chainBreaks.length },
+                stack_depth: { status: isEmbedded ? 'ok' : 'skipped', findings: stackRisks.length },
+                build_audit: { status: isApp ? 'ok' : 'skipped', findings: buildOrphans.length },
+                syscall_audit: { status: isApp ? 'ok' : 'skipped', findings: syscallIssues.length },
+                style_audit: { status: 'ok', findings: styleIssues.length },
+                api_style_audit: { status: 'ok', findings: apiIssues.length }
             }
         },
-        pin_conflicts: pinConflicts, control_chain_breaks: chainBreaks, stack_overflow_risks: stackRisks,
-        style_issues: styleIssues
+        pin_conflicts: pinConflicts, control_chain_breaks: chainBreaks,
+        stack_overflow_risks: stackRisks, style_issues: styleIssues,
+        build_orphans: buildOrphans, syscall_issues: syscallIssues,
+        api_mismatches: apiIssues
     };
     const outputPath = path.join(rootDir, 'unified-audit-report.json');
     fs.writeFileSync(outputPath, JSON.stringify(report, null, 2));
-    console.log(`[PREAUDIT] ${pinConflicts.length} conflicts, ${chainBreaks.length} chain breaks, ${stackRisks.length} stack risks, ${styleIssues.length} style issues — ${report.meta.scan_time_ms}ms`);
+    console.log(`[PREAUDIT] ${pinConflicts.length} conf, ${chainBreaks.length} chain, ${stackRisks.length} stack, ${styleIssues.length} style, ${buildOrphans.length} orphan, ${syscallIssues.length} sys, ${apiIssues.length} api — ${report.meta.scan_time_ms}ms`);
     console.log(`[PREAUDIT] Report written to ${outputPath}`);
 }
 main().catch(err => { console.error('[preaudit] Fatal:', err); process.exit(1); });

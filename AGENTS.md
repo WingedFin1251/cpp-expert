@@ -71,6 +71,15 @@ When `unified-audit-report.json` is present, you MUST use it as the **sole sourc
 | `stack_overflow_risks` | `severity: MEDIUM` | 🟡 MEDIUM — "stack usage advisory" |
 | `style_issues` | `id: B15` | 🟠 HIGH — "file-scope global — should be static" |
 | `style_issues` | Others | 🟡 MEDIUM — "code style or structure concern" |
+| `build_orphans` | Yes | 🟠 HIGH — "orphan source — not compiled (dead code)" |
+| `syscall_issues` | `id: B31` | 🟠 HIGH — "I/O return value unchecked" |
+| `syscall_issues` | `id: B32` | 🟠 HIGH — "zombie process risk" |
+| `syscall_issues` | `id: B33` | 🔴 CRITICAL — "putenv on string literal — UB" |
+| `syscall_issues` | `id: B36` | 🟡 MEDIUM — "dlopen without dlclose" |
+| `syscall_issues` | `id: B37` | 🔴 CRITICAL — "fork without waitpid — zombie leak" |
+| `syscall_issues` | `id: B38` | 🟠 HIGH — "deprecated C API" |
+| `api_mismatches` | `id: B34` | 🔴 CRITICAL — "API version inconsistency" |
+| `api_mismatches` | `id: B35` | 🟠 HIGH — "deprecated API usage" |
 
 **Degradation mode (no JSON available):**
 - Do NOT claim specific line numbers you cannot verify.

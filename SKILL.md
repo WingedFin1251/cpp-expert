@@ -154,6 +154,9 @@ Execute `run-static-analysis.sh` and optionally `run-sanitizers.sh`.
 - **scripts/ctrl_chain_check.js** — Control algorithm call chain analyzer (RTOS task aware)
 - **scripts/stack_depth_audit.js** — ISR stack usage estimator (Cortex-M aware)
 - **scripts/style_audit.js** — v1.5 style auditor (sentinel patterns, EXTI file placement, file-scope globals)
+- **scripts/build_audit.js** — v1.6 CMake build audit (orphan source files)
+- **scripts/syscall_audit.js** — v1.6 POSIX syscall safety audit
+- **scripts/api_style_audit.js** — v1.6 cross-file API consistency audit
 
 ## Code Review Output Format
 
