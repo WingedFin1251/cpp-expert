@@ -1,30 +1,37 @@
 const fs = require('fs');
 const path = require('path');
 
+const ROOT_DIR = process.cwd();
 const SRC_PATTERNS = ['.cpp', '.c', '.cc', '.cxx'];
 
-function collectFiles(dir) {
+function collectFiles(dirOrDirs) {
     const results = [];
-    if (!fs.existsSync(dir)) return results;
-    const entries = fs.readdirSync(dir, { withFileTypes: true });
-    for (const e of entries) {
-        const full = path.join(dir, e.name);
-        if (e.name === '.git' || e.name === 'node_modules' || e.name === 'build' || e.name === 'Debug' || e.name === 'Release') continue;
-        if (e.isDirectory()) results.push(...collectFiles(full));
-        else if (SRC_PATTERNS.some(p => e.name.endsWith(p))) results.push(full);
+    const dirs = dirOrDirs.split(',').map(d => d.trim()).filter(d => d);
+    for (const dir of dirs) {
+        if (!fs.existsSync(dir)) continue;
+        const entries = fs.readdirSync(dir, { withFileTypes: true });
+        for (const e of entries) {
+            const full = path.join(dir, e.name);
+            if (e.name === '.git' || e.name === 'node_modules' || e.name === 'build' || e.name === 'Debug' || e.name === 'Release') continue;
+            if (e.isDirectory()) results.push(...collectFiles(full));
+            else if (SRC_PATTERNS.some(p => e.name.endsWith(p))) results.push(full);
+        }
     }
     return results;
 }
 
-function findCMakeFiles(dir) {
+function findCMakeFiles(dirOrDirs) {
     const results = [];
-    if (!fs.existsSync(dir)) return results;
-    const entries = fs.readdirSync(dir, { withFileTypes: true });
-    for (const e of entries) {
-        const full = path.join(dir, e.name);
-        if (e.name === '.git' || e.name === 'node_modules' || e.name === 'build') continue;
-        if (e.isDirectory()) results.push(...findCMakeFiles(full));
-        else if (e.name === 'CMakeLists.txt') results.push(full);
+    const dirs = dirOrDirs.split(',').map(d => d.trim()).filter(d => d);
+    for (const dir of dirs) {
+        if (!fs.existsSync(dir)) continue;
+        const entries = fs.readdirSync(dir, { withFileTypes: true });
+        for (const e of entries) {
+            const full = path.join(dir, e.name);
+            if (e.name === '.git' || e.name === 'node_modules' || e.name === 'build') continue;
+            if (e.isDirectory()) results.push(...findCMakeFiles(full));
+            else if (e.name === 'CMakeLists.txt') results.push(full);
+        }
     }
     return results;
 }
@@ -43,10 +50,31 @@ function expandVariables(expr, varMap) {
     return expr.replace(/\${([^}]+)}/g, (_, name) => varMap[name] || '');
 }
 
+function addDirSources(dir, cmakeDir, sources) {
+    if (!fs.existsSync(dir)) return;
+    const entries = fs.readdirSync(dir, { withFileTypes: true });
+    for (const e of entries) {
+        const full = path.join(dir, e.name);
+        if (e.isFile() && SRC_PATTERNS.some(p => e.name.endsWith(p))) {
+            sources.add(path.resolve(cmakeDir, full));
+        }
+    }
+}
+
 function extractSources(cmakeContent, cmakeDir) {
     const sources = new Set();
     const varMap = collectVariables(cmakeContent);
     const cleaned = cmakeContent.replace(/#.*$/gm, '');
+
+    // aux_source_directory(dir VAR) — all sources in dir are compiled
+    let m;
+    const auxRe = /aux_source_directory\s*\(\s*([^)]+)\)/g;
+    while ((m = auxRe.exec(cleaned)) !== null) {
+        const args = m[1].split(/\s+/).filter(Boolean);
+        if (args.length >= 1) {
+            addDirSources(path.resolve(cmakeDir, args[0]), cmakeDir, sources);
+        }
+    }
 
     const patterns = [
         /(?:add_library|add_executable)\s*\(\s*([^)]+)\)/g,
@@ -54,14 +82,12 @@ function extractSources(cmakeContent, cmakeDir) {
     ];
 
     for (const re1 of patterns) {
-        let m;
         while ((m = re1.exec(cleaned)) !== null) {
             if (m[1].trim() === 'INTERFACE') continue;
             m[1].split(/\s+/).forEach(f => {
                 const trimmed = f.trim();
                 if (!trimmed || trimmed === 'INTERFACE') return;
                 const expanded = expandVariables(trimmed, varMap);
-                // Split on whitespace to handle multi-file variables (set(SRCS a.cpp b.cpp))
                 expanded.split(/\s+/).forEach(exp => {
                     const t = exp.trim();
                     if (t && SRC_PATTERNS.some(p => t.endsWith(p))) {
@@ -89,7 +115,7 @@ function main(dir) {
         if (!compiledSources.has(f)) {
             orphans.push({
                 id: 'B30', pattern: 'orphan_source', severity: 'HIGH',
-                file: f, line: 1,
+                file: path.relative(ROOT_DIR, f).replace(/\\/g, '/'), line: 1,
                 detail: 'Source exists but not in CMakeLists.txt — possible dead code'
             });
         }
