@@ -1,0 +1,97 @@
+const fs = require('fs');
+const path = require('path');
+
+const IGNORE_DIRS = ['Drivers', 'Middlewares', '.git', 'node_modules', 'build', 'Debug', 'Release'];
+const DEPRECATED_APIS = /\b(sprintf|strcpy|strcat|gets)\s*\(/;
+
+function collectFiles(dirOrDirs) {
+    const results = [];
+    const dirs = dirOrDirs.split(',').map(d => d.trim()).filter(d => d);
+    for (const dir of dirs) {
+        if (!fs.existsSync(dir)) continue;
+        const entries = fs.readdirSync(dir, { withFileTypes: true });
+        for (const e of entries) {
+            const full = path.join(dir, e.name);
+            if (e.isDirectory() && !IGNORE_DIRS.includes(e.name.toLowerCase())) collectFiles(full, results);
+            else if (e.isFile() && /\.(c|cpp|h|hpp)$/i.test(e.name)) results.push(full);
+        }
+    }
+    return results;
+}
+
+function stripComments(content) {
+    return content
+        .replace(/"(?:\\.|[^"\\])*"/g, '""')
+        .replace(/'(?:\\.|[^'\\])*'/g, "''")
+        .replace(/\/\*[\s\S]*?\*\//g, m => m.replace(/[^\n]/g, ''))
+        .replace(/\/\/.*/g, '');
+}
+
+function isVariadic(content, macroName) {
+    // Check all files (not just headers) for variadic macro definition
+    const re = new RegExp('#define\\s+' + macroName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*\\([^)]*\\.\\.\\.');
+    return re.test(content);
+}
+
+function main(dir) {
+    const files = collectFiles(dir);
+    // Build concatenated content of ALL files for variadic detection
+    const allContent = files.map(f => { try { return fs.readFileSync(f, 'utf-8'); } catch(e) { return ''; } }).join('\n');
+
+    const callStats = {};
+    const issues = [];
+
+    for (const f of files) {
+        if (/\.(h|hpp)$/i.test(f)) continue;
+        const raw = fs.readFileSync(f, 'utf-8');
+        const content = stripComments(raw);
+        const lines = content.split('\n');
+
+        // B34: Only match ALL_CAPS macros to avoid C++ overload false positives
+        const macroRe = /\b([A-Z][A-Z0-9_]{2,})\s*\(([^)]*)\)/g;
+        let m;
+        while ((m = macroRe.exec(content)) !== null) {
+            const name = m[1];
+            if (/^(true|false|NULL|NULLPTR|__FILE__|__LINE__|__DATE__)$/i.test(name)) continue;
+            if (isVariadic(allContent, name)) continue;
+            const args = m[2].split(',').length;
+            if (!callStats[name]) callStats[name] = {};
+            if (!callStats[name][args]) callStats[name][args] = [];
+            const lineNum = lines.indexOf(m[0]);
+            callStats[name][args].push(f + ':' + (lineNum >= 0 ? lineNum + 1 : 1));
+        }
+
+        // B35: Deprecated API detection (use stripped content to avoid comments)
+        for (let i = 0; i < lines.length; i++) {
+            if (DEPRECATED_APIS.test(lines[i]) && !lines[i].trim().startsWith('//')) {
+                const api = lines[i].match(DEPRECATED_APIS)[1];
+                issues.push({
+                    id: 'B35', severity: 'HIGH', pattern: 'deprecated_api',
+                    file: f, line: i + 1,
+                    detail: "Deprecated API '" + api + "' — use safer alternative"
+                });
+            }
+        }
+    }
+
+    for (const [name, arities] of Object.entries(callStats)) {
+        const arityKeys = Object.keys(arities);
+        if (arityKeys.length > 1) {
+            const locs = Object.entries(arities)
+                .map(([arity, locs]) => arity + ' args: ' + locs.join(', '))
+                .join('; ');
+            issues.push({
+                id: 'B34', severity: 'CRITICAL', pattern: 'macro_arity_mismatch',
+                file: '.', line: 1,
+                detail: "Macro '" + name + "' called with inconsistent arg counts: " + locs
+            });
+        }
+    }
+
+    return issues;
+}
+
+const targetDir = process.argv[2] || '.';
+console.error('[api_style_audit] Scanning ' + targetDir + '...');
+const results = main(targetDir);
+console.log(JSON.stringify(results, null, 2));
