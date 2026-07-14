@@ -39,10 +39,15 @@ function findCMakeFiles(dirOrDirs) {
 
 function collectVariables(cmakeContent) {
     const vars = {};
-    const re = /set\s*\(\s*(\w+)\s+([^)]+)\)/gi;
     let m;
-    while ((m = re.exec(cmakeContent)) !== null) {
+    const setRe = /set\s*\(\s*(\w+)\s+([^)]+)\)/gi;
+    while ((m = setRe.exec(cmakeContent)) !== null) {
         vars[m[1]] = m[2].trim();
+    }
+    const listRe = /list\s*\(\s*APPEND\s+(\w+)\s+([^)]+)\)/gi;
+    while ((m = listRe.exec(cmakeContent)) !== null) {
+        const val = m[2].trim();
+        vars[m[1]] = vars[m[1]] ? vars[m[1]] + ' ' + val : val;
     }
     return vars;
 }

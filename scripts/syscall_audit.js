@@ -49,19 +49,17 @@ function main(dir) {
             if (ioMatch) {
                 const context = strippedLines.slice(Math.max(0, i - 3), i + 1).join('\n');
                 const hasAssignment = /\b\w+\s*=\s*(?:[\w\s()*])*(fwrite|fread|chmod)\s*\(/.test(context);
-                const hasVoidCast = /\(\s*void\s*\)\s*(fwrite|fread|chmod)\s*\(/.test(line);
+                const hasVoidCast = /\(\s*void\s*\)\s*(fwrite|fread|chmod)\s*\(/.test(context);
                 // fwrite inside condition: check parens balance in PREFIX only
                 const prefix = line.substring(0, ioMatch.index);
                 const pOpen = (prefix.match(/\(/g) || []).length;
                 const pClose = (prefix.match(/\)/g) || []).length;
                 const inCondition = /\b(if|while|for|switch|return)\b/.test(prefix) && pOpen > pClose;
-                // Multi-line condition: check prev + context, use parens balance
-                const prevLine = (strippedLines[i - 1] || '').trim();
+                // Multi-line condition: find LAST control keyword, count parens from there
                 const multiLineContext = strippedLines.slice(Math.max(0, i - 5), i).join('\n');
-                const openP = (multiLineContext.match(/\(/g) || []).length;
-                const closeP = (multiLineContext.match(/\)/g) || []).length;
-                const inMultilineCondition = prevLine.endsWith('&&') || prevLine.endsWith('||') ||
-                    (openP > closeP && /\b(if|while|for|switch)\b/.test(multiLineContext));
+                const ctrlMatch = multiLineContext.match(/\b(if|while|for|switch)\b[^ifwhile]*$/i);
+                const inMultilineCondition = ctrlMatch !== null &&
+                    ((ctrlMatch[0].match(/\(/g) || []).length > (ctrlMatch[0].match(/\)/g) || []).length);
                 if (!inCondition && !inMultilineCondition && !hasAssignment && !hasVoidCast) {
                     issues.push({
                         id: 'B31', severity: 'HIGH', pattern: 'unchecked_io',
