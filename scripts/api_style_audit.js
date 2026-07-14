@@ -57,7 +57,8 @@ function main(dir) {
             const argsStr = m[2];
             // Skip if args contain unbalanced nested parens — regex truncated
             if (argsStr.includes('(') && !argsStr.includes(')')) continue;
-            const args = argsStr.split(',').length;
+            // Handle empty args: MY_MACRO() → 0 args, not 1 ("" split)
+            const args = argsStr.trim() === '' ? 0 : argsStr.split(',').length;
             if (!callStats[name]) callStats[name] = {};
             if (!callStats[name][args]) callStats[name][args] = [];
             const lineNum = content.substring(0, m.index).split('\n').length;

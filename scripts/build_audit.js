@@ -61,9 +61,13 @@ function extractSources(cmakeContent, cmakeDir) {
                 const trimmed = f.trim();
                 if (!trimmed || trimmed === 'INTERFACE') return;
                 const expanded = expandVariables(trimmed, varMap);
-                if (expanded && SRC_PATTERNS.some(p => expanded.endsWith(p))) {
-                    sources.add(path.resolve(cmakeDir, expanded));
-                }
+                // Split on whitespace to handle multi-file variables (set(SRCS a.cpp b.cpp))
+                expanded.split(/\s+/).forEach(exp => {
+                    const t = exp.trim();
+                    if (t && SRC_PATTERNS.some(p => t.endsWith(p))) {
+                        sources.add(path.resolve(cmakeDir, t));
+                    }
+                });
             });
         }
     }

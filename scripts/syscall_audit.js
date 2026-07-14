@@ -89,7 +89,7 @@ function main(dir) {
         }
 
         const fk = (stripped.match(/\bfork\s*\(/g) || []).length;
-        const wp = (stripped.match(/\bwaitpid\s*\(/g) || []).length;
+        const wp = (stripped.match(/\b(?:waitpid|wait)\s*\(/g) || []).length;
         forkCount += fk;
         waitpidCount += wp;
         if (fk > 0) forkFiles.add(f);
