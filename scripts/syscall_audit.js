@@ -43,15 +43,14 @@ function main(dir) {
         for (let i = 0; i < strippedLines.length; i++) {
             const line = strippedLines[i];
 
-            // B31: Unchecked I/O — check line-level control flow, assignment, or void cast
+            // B31: Unchecked I/O — fwrite must be inside control-flow condition to be checked
             if (/\b(fwrite|fread|chmod)\s*\(/.test(line)) {
                 const context = strippedLines.slice(Math.max(0, i - 3), i + 1).join('\n');
                 const hasAssignment = /\b\w+\s*=\s*(fwrite|fread|chmod)\s*\(/.test(context);
                 const hasVoidCast = /\(\s*void\s*\)\s*(fwrite|fread|chmod)\s*\(/.test(line);
-                // Check line-level: fwrite itself wrapped in if/while/etc; NOT unrelated previous if
-                const lineControl = /\b(if|while|for|switch|return)\s*[^;]*\b(fwrite|fread|chmod)\s*\(/.test(line);
-                const multiLineControl = i > 0 && /\b(if|while|for|switch|return)\b.*\)\s*$/.test(strippedLines[i - 1]);
-                if (!lineControl && !multiLineControl && !line.trim().startsWith('if') && !hasAssignment && !hasVoidCast) {
+                // fwrite inside condition: if (fwrite(...) > 0) — true control flow check
+                const inCondition = /\b(if|while|for|switch|return)\s*\([^)]*\b(fwrite|fread|chmod)\s*\(/.test(line);
+                if (!inCondition && !hasAssignment && !hasVoidCast) {
                     issues.push({
                         id: 'B31', severity: 'HIGH', pattern: 'unchecked_io',
                         file: f, line: i + 1,

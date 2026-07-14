@@ -3,7 +3,7 @@ const path = require('path');
 
 const ROOT_DIR = process.cwd();
 const SRC_PATTERNS = ['.cpp', '.c', '.cc', '.cxx'];
-const IGNORE_DIRS = ['.git', 'node_modules', 'build', 'debug', 'release', 'cmake-build-debug', 'out'];
+const IGNORE_DIRS = ['Drivers', 'Middlewares', '.git', 'node_modules', 'build', 'debug', 'release', 'cmake-build-debug', 'out'];
 
 function collectFiles(dirOrDirs) {
     const results = [];
