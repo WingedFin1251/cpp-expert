@@ -13,6 +13,10 @@ for (let i = 0; i < args.length; i++) {
 
 // Support multiple --include-dir args; pass all as space-separated to sub-scripts
 const targetDir = includeDirs.length > 0 ? includeDirs.join(',') : '.';
+// Note: --exclude is recorded in report meta but NOT passed to sub-scripts (they use their own IGNORE_DIRS)
+if (excludeDirs.length > 0 && !excludeDirs.every(d => ['Drivers', 'Middlewares', '.git', 'node_modules', 'build', 'Debug', 'Release', '.vscode'].includes(d))) {
+    console.error('[preaudit] WARNING: Custom --exclude is recorded in meta only. Sub-scripts use built-in IGNORE_DIRS.');
+}
 const rootDir = process.cwd();
 const scriptsDir = __dirname;
 

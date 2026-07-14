@@ -55,8 +55,8 @@ function main(dir) {
             if (/^(true|false|NULL|NULLPTR|__FILE__|__LINE__|__DATE__)$/i.test(name)) continue;
             if (isVariadic(allContent, name)) continue;
             const argsStr = m[2];
-            // Skip if args contain unbalanced nested parens — regex truncated
-            if (argsStr.includes('(') && !argsStr.includes(')')) continue;
+            // Skip if args contain nested parens (regex truncated by [^)]*)
+            if (argsStr.includes('(')) continue;
             // Handle empty args: MY_MACRO() → 0 args, not 1 ("" split)
             const args = argsStr.trim() === '' ? 0 : argsStr.split(',').length;
             if (!callStats[name]) callStats[name] = {};
