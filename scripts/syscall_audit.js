@@ -31,10 +31,12 @@ function main(dir) {
     const issues = [];
     let forkCount = 0, waitpidCount = 0;
     const forkFiles = new Set(), waitpidFiles = new Set();
+    let hasSigIgn = false;
 
     for (const f of files) {
         const raw = fs.readFileSync(f, 'utf-8');
         const stripped = stripContent(raw);
+        if (!hasSigIgn && stripped.includes('SIGCHLD') && stripped.includes('SIG_IGN')) hasSigIgn = true;
         const strippedLines = stripped.split('\n');
 
         for (let i = 0; i < strippedLines.length; i++) {
@@ -63,16 +65,14 @@ function main(dir) {
                     });
                 }
             }
-            // B33: const_cast + direct string literal
+            // B33: const_cast + direct string literal (else-if to avoid double-fire)
             if (/putenv\s*\(\s*const_cast/.test(line) || /const_cast\s*<char[^>]*>\s*\(\s*"/.test(line)) {
                 issues.push({
                     id: 'B33', severity: 'CRITICAL', pattern: 'const_cast_ub',
                     file: f, line: i + 1,
                     detail: 'putenv with const_cast string literal — UB'
                 });
-            }
-            // B33b: direct string literal to putenv
-            if (/putenv\s*\(\s*"[^"]*"\s*\)/.test(line)) {
+            } else if (/putenv\s*\(\s*"[^"]*"\s*\)/.test(line)) {
                 issues.push({
                     id: 'B33', severity: 'CRITICAL', pattern: 'putenv_literal',
                     file: f, line: i + 1,
@@ -96,7 +96,9 @@ function main(dir) {
         if (wp > 0) waitpidFiles.add(f);
     }
 
-    if (forkCount > waitpidCount) {
+    // Exempt SIGCHLD=SIG_IGN pattern (kernel auto-reaps children)
+    const hasSigIgn = stripped.includes('SIGCHLD') && stripped.includes('SIG_IGN');
+    if (forkCount > waitpidCount && !hasSigIgn) {
         issues.push({
             id: 'B37', severity: 'CRITICAL', pattern: 'fork_wait_mismatch',
             file: [...forkFiles][0] || '.', line: 1,

@@ -35,8 +35,8 @@ function isVariadic(content, macroName) {
 
 function main(dir) {
     const files = collectFiles(dir);
-    // Build concatenated content of ALL files for variadic detection
-    const allContent = files.map(f => { try { return fs.readFileSync(f, 'utf-8'); } catch(e) { return ''; } }).join('\n');
+    // Build concatenated content of ALL files for variadic detection (comment-stripped)
+    const allContent = files.map(f => { try { return stripComments(fs.readFileSync(f, 'utf-8')); } catch(e) { return ''; } }).join('\n');
 
     const callStats = {};
     const issues = [];
