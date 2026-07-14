@@ -72,8 +72,14 @@ function main(dir) {
         }
 
         // B35: Deprecated API detection (exclude C++ member calls like obj.sprintf)
+        let inMacro = false;
         for (let i = 0; i < lines.length; i++) {
-            if (lines[i].trim().startsWith('//') || lines[i].trim().startsWith('#')) continue;
+            const trimmed = lines[i].trim();
+            if (inMacro) { inMacro = trimmed.endsWith('\\'); continue; }
+            if (trimmed.startsWith('//') || trimmed.startsWith('#')) {
+                inMacro = trimmed.startsWith('#') && trimmed.endsWith('\\');
+                continue;
+            }
             const matches = [...lines[i].matchAll(DEPRECATED_APIS)];
             for (const m of matches) {
                 // Exclude if preceded by '.', '->', or '::' (C++ member/namespace/ptr call)

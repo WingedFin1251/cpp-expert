@@ -57,9 +57,10 @@ function main(dir) {
                 const inCondition = /\b(if|while|for|switch|return)\b/.test(prefix) && pOpen > pClose;
                 // Multi-line condition: find LAST control keyword, count parens from there
                 const multiLineContext = strippedLines.slice(Math.max(0, i - 5), i).join('\n');
-                const ctrlMatch = multiLineContext.match(/\b(if|while|for|switch)\b[^ifwhile]*$/i);
+                // Match last control keyword and everything after it
+                const ctrlMatch = multiLineContext.match(/[\s\S]*\b(if|while|for|switch)\b([\s\S]*)$/i);
                 const inMultilineCondition = ctrlMatch !== null &&
-                    ((ctrlMatch[0].match(/\(/g) || []).length > (ctrlMatch[0].match(/\)/g) || []).length);
+                    ((ctrlMatch[2].match(/\(/g) || []).length > (ctrlMatch[2].match(/\)/g) || []).length);
                 if (!inCondition && !inMultilineCondition && !hasAssignment && !hasVoidCast) {
                     issues.push({
                         id: 'B31', severity: 'HIGH', pattern: 'unchecked_io',
