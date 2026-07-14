@@ -48,7 +48,7 @@ Before any review, determine whether the target code is **C** or **C++**:
 
 ## Development Process
 
-### 0. **Three-Stage Deep Review** (v1.5 — MANDATORY)
+### 0. **Three-Stage Deep Review** (v1.6 — MANDATORY)
 Execute **Pre-stage → Stage 1 → Stage 2** in order. Do NOT skip the pre-stage
 when Node.js is available — it reduces Stage 2 token cost by ~93%.
 
