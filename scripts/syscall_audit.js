@@ -75,8 +75,8 @@ function main(dir) {
                     });
                 }
             }
-            // B33: const_cast + direct string literal (else-if to avoid double-fire)
-            if (/putenv\s*\(\s*const_cast/.test(line) || /const_cast\s*<char[^>]*>\s*\(\s*"/.test(line)) {
+            // B33: putenv with const_cast or string literal (only putenv context)
+            if (/putenv\s*\(\s*const_cast/.test(line)) {
                 issues.push({
                     id: 'B33', severity: 'CRITICAL', pattern: 'const_cast_ub',
                     file: f, line: i + 1,

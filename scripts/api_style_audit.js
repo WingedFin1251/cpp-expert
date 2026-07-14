@@ -54,10 +54,10 @@ function main(dir) {
             const name = m[1];
             if (/^(true|false|NULL|NULLPTR|__FILE__|__LINE__|__DATE__)$/i.test(name)) continue;
             if (isVariadic(allContent, name)) continue;
-            // Skip #define lines (macro definition, not a call)
+            // Skip #define lines (macro definition, not a call) — handle # spaces
             const lineStart = content.lastIndexOf('\n', m.index) + 1;
             const lineText = content.substring(lineStart, m.index).trim();
-            if (lineText.startsWith('#define')) continue;
+            if (/^#\s*define/.test(lineText)) continue;
             // Skip function pointer declarations: void (*NAME)(params)
             if (/\(\s*\*\s*\w+\s*\)\s*\(/.test(m[0])) continue;
             const argsStr = m[2];
@@ -74,7 +74,7 @@ function main(dir) {
         // B35: Deprecated API detection (exclude C++ member calls like obj.sprintf)
         for (let i = 0; i < lines.length; i++) {
             const m = lines[i].match(DEPRECATED_APIS);
-            if (m && !lines[i].trim().startsWith('//')) {
+            if (m && !lines[i].trim().startsWith('//') && !lines[i].trim().startsWith('#')) {
                 // Exclude if preceded by '.' or '->' (C++ member/pointer function call)
                 const prefix = lines[i].substring(0, m.index);
                 if (/(?:\.|->)\s*$/.test(prefix)) continue;
