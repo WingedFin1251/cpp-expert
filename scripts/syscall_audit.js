@@ -45,7 +45,7 @@ function main(dir) {
             // B31: Unchecked I/O — check surrounding context for control flow, assignment, or void cast
             if (/\b(fwrite|fread|chmod)\s*\(/.test(line)) {
                 const context = strippedLines.slice(Math.max(0, i - 3), i + 1).join('\n');
-                const hasAssignment = /\b\w+\s*=\s*(fwrite|fread|chmod)\s*\(/.test(line);
+                const hasAssignment = /\b\w+\s*=\s*(fwrite|fread|chmod)\s*\(/.test(context);
                 const hasVoidCast = /\(\s*void\s*\)\s*(fwrite|fread|chmod)\s*\(/.test(line);
                 const inControlFlow = /\b(if|while|for|switch|return)\s*\(/.test(context);
                 if (!inControlFlow && !line.trim().startsWith('if') && !hasAssignment && !hasVoidCast) {

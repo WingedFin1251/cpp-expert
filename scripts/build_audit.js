@@ -3,6 +3,7 @@ const path = require('path');
 
 const ROOT_DIR = process.cwd();
 const SRC_PATTERNS = ['.cpp', '.c', '.cc', '.cxx'];
+const IGNORE_DIRS = ['.git', 'node_modules', 'build', 'debug', 'release', 'cmake-build-debug', 'out'];
 
 function collectFiles(dirOrDirs) {
     const results = [];
@@ -12,7 +13,7 @@ function collectFiles(dirOrDirs) {
         const entries = fs.readdirSync(dir, { withFileTypes: true });
         for (const e of entries) {
             const full = path.join(dir, e.name);
-            if (e.name === '.git' || e.name === 'node_modules' || e.name === 'build' || e.name === 'Debug' || e.name === 'Release') continue;
+            if (e.isDirectory() && IGNORE_DIRS.includes(e.name.toLowerCase())) continue;
             if (e.isDirectory()) results.push(...collectFiles(full));
             else if (SRC_PATTERNS.some(p => e.name.endsWith(p))) results.push(full);
         }
@@ -28,7 +29,7 @@ function findCMakeFiles(dirOrDirs) {
         const entries = fs.readdirSync(dir, { withFileTypes: true });
         for (const e of entries) {
             const full = path.join(dir, e.name);
-            if (e.name === '.git' || e.name === 'node_modules' || e.name === 'build') continue;
+            if (e.isDirectory() && IGNORE_DIRS.includes(e.name.toLowerCase())) continue;
             if (e.isDirectory()) results.push(...findCMakeFiles(full));
             else if (e.name === 'CMakeLists.txt') results.push(full);
         }

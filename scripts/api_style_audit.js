@@ -62,7 +62,7 @@ function main(dir) {
             if (!callStats[name]) callStats[name] = {};
             if (!callStats[name][args]) callStats[name][args] = [];
             const lineNum = content.substring(0, m.index).split('\n').length;
-            callStats[name][args].push(f + ':' + (lineNum >= 0 ? lineNum + 1 : 1));
+            callStats[name][args].push(f + ':' + lineNum);
         }
 
         // B35: Deprecated API detection (use stripped content to avoid comments)
