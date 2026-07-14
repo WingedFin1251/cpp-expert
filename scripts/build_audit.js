@@ -53,7 +53,14 @@ function collectVariables(cmakeContent) {
 }
 
 function expandVariables(expr, varMap) {
-    return expr.replace(/\${([^}]+)}/g, (_, name) => varMap[name] || '');
+    let prev, current = expr;
+    let depth = 0;
+    while (prev !== current && depth < 10) {
+        prev = current;
+        current = current.replace(/\${([^}]+)}/g, (_, name) => varMap[name] || '');
+        depth++;
+    }
+    return current;
 }
 
 function addDirSources(dir, cmakeDir, sources) {

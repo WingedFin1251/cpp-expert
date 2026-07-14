@@ -58,8 +58,10 @@ function main(dir) {
             const lineStart = content.lastIndexOf('\n', m.index) + 1;
             const lineText = content.substring(lineStart, m.index).trim();
             if (/^#\s*define/.test(lineText)) continue;
-            // Skip function pointer declarations: lineText ends with (*
+            // Skip function pointer: lineText ends with (*, or 20-char prefix has (* (cross-line)
             if (/\(\s*\*\s*$/.test(lineText)) continue;
+            const prefix = content.substring(Math.max(0, m.index - 20), m.index);
+            if (/\(\s*\*\s*$/.test(prefix)) continue;
             const argsStr = m[2];
             // Skip if args contain nested parens (regex truncated by [^)]*)
             if (argsStr.includes('(')) continue;

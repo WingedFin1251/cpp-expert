@@ -80,14 +80,15 @@ function main(dir) {
                     });
                 }
             }
-            // B33: putenv with const_cast or string literal (only putenv context)
-            if (/putenv\s*\(\s*const_cast/.test(line)) {
+            // B33: putenv with const_cast or string literal (use context for cross-line)
+            const putenvContext = strippedLines.slice(Math.max(0, i - 3), i + 1).join('\n');
+            if (/putenv\s*\(\s*const_cast/.test(putenvContext)) {
                 issues.push({
                     id: 'B33', severity: 'CRITICAL', pattern: 'const_cast_ub',
                     file: f, line: i + 1,
                     detail: 'putenv with const_cast string literal — UB'
                 });
-            } else if (/putenv\s*\(\s*"[^"]*"\s*\)/.test(line)) {
+            } else if (/putenv\s*\(\s*"[^"]*"\s*\)/.test(putenvContext)) {
                 issues.push({
                     id: 'B33', severity: 'CRITICAL', pattern: 'putenv_literal',
                     file: f, line: i + 1,
