@@ -14,15 +14,13 @@ for (let i = 0; i < args.length; i++) {
         const val = args[++i];
         if (!excludeDirs.includes(val.toLowerCase())) excludeDirs.push(val.toLowerCase());
     }
-    if (args[i] === '--project-type' && i + 1 < args.length) projectTypeOverride = args[++i];
+    if (args[i] === '--project-type' && i + 1 < args.length && !args[i + 1].startsWith('--')) {
+        projectTypeOverride = args[++i].toLowerCase();
+    }
 }
 
 // Support multiple --include-dir args; pass all as space-separated to sub-scripts
 const targetDir = includeDirs.length > 0 ? includeDirs.join(',') : '.';
-// --exclude is recorded in meta; sub-scripts use built-in IGNORE_DIRS
-if (excludeDirs.length > defaultExcludes.length) {
-    console.error('[preaudit] WARNING: Custom --exclude dir(s) recorded in meta only. Sub-scripts may not honor them.');
-}
 const rootDir = process.cwd();
 const scriptsDir = __dirname;
 
@@ -33,7 +31,10 @@ function runScript(name) {
             console.error(`[preaudit] WARNING: ${name} not found, skipping`);
             return resolve({ findings: [], status: 'skipped' });
         }
-        execFile(process.execPath, [scriptPath, targetDir], { cwd: rootDir, maxBuffer: 10 * 1024 * 1024 }, (err, stdout, stderr) => {
+        execFile(process.execPath, [scriptPath, targetDir], {
+            cwd: rootDir, maxBuffer: 10 * 1024 * 1024,
+            env: { ...process.env, PREAUDIT_EXCLUDE_DIRS: [...new Set(excludeDirs)].join(',') }
+        }, (err, stdout, stderr) => {
             if (err) {
                 console.error(`[preaudit] ERROR running ${name}: ${err.message}`);
                 return resolve({ findings: [], status: 'error' });
@@ -51,11 +52,14 @@ async function main() {
     // Detect project type (embedded vs app)
     const hasDrivers = fs.existsSync(path.join(rootDir, 'Drivers'));
     const hasPlatformIO = fs.existsSync(path.join(rootDir, 'platformio.ini'));
-    const hasStdPeriph = fs.existsSync(path.join(rootDir, 'FWLIB')) && fs.existsSync(path.join(rootDir, 'CORE'));
-    const hasCMSIS = fs.existsSync(path.join(rootDir, 'CORE', 'core_cm4.h')) || fs.existsSync(path.join(rootDir, 'CORE', 'core_cm3.h'));
+    const hasFWLIB = fs.existsSync(path.join(rootDir, 'FWLIB')) || fs.existsSync(path.join(rootDir, 'fwlib'));
+    const hasCORE = fs.existsSync(path.join(rootDir, 'CORE')) || fs.existsSync(path.join(rootDir, 'core'));
+    const hasStdPeriph = hasFWLIB && hasCORE;
+    const hasCMSIS = fs.existsSync(path.join(rootDir, 'CORE', 'core_cm4.h')) || fs.existsSync(path.join(rootDir, 'CORE', 'core_cm3.h')) ||
+                     fs.existsSync(path.join(rootDir, 'core', 'core_cm4.h')) || fs.existsSync(path.join(rootDir, 'core', 'core_cm3.h'));
     const hasSTM32Conf = fs.existsSync(path.join(rootDir, 'USER', 'main.c')) &&
                          (fs.existsSync(path.join(rootDir, 'USER', 'stm32f4xx_conf.h')) ||
-                          fs.existsSync(path.join(rootDir, 'USER', 'stm32f10x_conf.h')));
+                          fs.existsSync(path.join(rootDir, 'User', 'stm32f4xx_conf.h')));
     const autoEmbedded = hasDrivers || hasPlatformIO || hasStdPeriph || hasCMSIS || hasSTM32Conf;
     const isEmbedded = projectTypeOverride === 'embedded' ? true :
                        projectTypeOverride === 'app' ? false : autoEmbedded;
