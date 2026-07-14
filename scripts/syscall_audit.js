@@ -97,7 +97,6 @@ function main(dir) {
     }
 
     // Exempt SIGCHLD=SIG_IGN pattern (kernel auto-reaps children)
-    const hasSigIgn = stripped.includes('SIGCHLD') && stripped.includes('SIG_IGN');
     if (forkCount > waitpidCount && !hasSigIgn) {
         issues.push({
             id: 'B37', severity: 'CRITICAL', pattern: 'fork_wait_mismatch',
