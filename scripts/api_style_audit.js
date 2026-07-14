@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const IGNORE_DIRS = ['Drivers', 'Middlewares', '.git', 'node_modules', 'build', 'Debug', 'Release'];
+const IGNORE_DIRS = ['Drivers', 'Middlewares', '.git', 'node_modules', 'build', 'debug', 'release', 'cmake-build-debug', 'out'];
 const DEPRECATED_APIS = /\b(sprintf|strcpy|strcat|gets)\s*\(/;
 
 function collectFiles(dirOrDirs) {

@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const IGNORE_DIRS = ['Drivers', 'Middlewares', '.git', 'node_modules', 'build', 'Debug', 'Release'];
+const IGNORE_DIRS = ['Drivers', 'Middlewares', '.git', 'node_modules', 'build', 'debug', 'release', 'cmake-build-debug', 'out'];
 
 function collectFiles(dirOrDirs) {
     const results = [];
@@ -37,19 +37,21 @@ function main(dir) {
     for (const f of files) {
         const raw = fs.readFileSync(f, 'utf-8');
         const stripped = stripContent(raw);
-        if (!hasSigIgn && stripped.includes('SIGCHLD') && stripped.includes('SIG_IGN')) hasSigIgn = true;
+        if (!hasSigIgn && /signal\s*\(\s*SIGCHLD\s*,\s*SIG_IGN\s*\)/.test(stripped)) hasSigIgn = true;
         const strippedLines = stripped.split('\n');
 
         for (let i = 0; i < strippedLines.length; i++) {
             const line = strippedLines[i];
 
-            // B31: Unchecked I/O — check surrounding context for control flow, assignment, or void cast
+            // B31: Unchecked I/O — check line-level control flow, assignment, or void cast
             if (/\b(fwrite|fread|chmod)\s*\(/.test(line)) {
                 const context = strippedLines.slice(Math.max(0, i - 3), i + 1).join('\n');
                 const hasAssignment = /\b\w+\s*=\s*(fwrite|fread|chmod)\s*\(/.test(context);
                 const hasVoidCast = /\(\s*void\s*\)\s*(fwrite|fread|chmod)\s*\(/.test(line);
-                const inControlFlow = /\b(if|while|for|switch|return)\s*\(/.test(context);
-                if (!inControlFlow && !line.trim().startsWith('if') && !hasAssignment && !hasVoidCast) {
+                // Check line-level: fwrite itself wrapped in if/while/etc; NOT unrelated previous if
+                const lineControl = /\b(if|while|for|switch|return)\s*[^;]*\b(fwrite|fread|chmod)\s*\(/.test(line);
+                const multiLineControl = i > 0 && /\b(if|while|for|switch|return)\b.*\)\s*$/.test(strippedLines[i - 1]);
+                if (!lineControl && !multiLineControl && !line.trim().startsWith('if') && !hasAssignment && !hasVoidCast) {
                     issues.push({
                         id: 'B31', severity: 'HIGH', pattern: 'unchecked_io',
                         file: f, line: i + 1,
