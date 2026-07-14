@@ -48,7 +48,7 @@ function main(dir) {
             const ioMatch = line.match(/\b(fwrite|fread|chmod)\s*\(/);
             if (ioMatch) {
                 const context = strippedLines.slice(Math.max(0, i - 3), i + 1).join('\n');
-                const hasAssignment = /\b\w+\s*=\s*(fwrite|fread|chmod)\s*\(/.test(context);
+                const hasAssignment = /\b\w+\s*=\s*(?:[\w\s()*])*(fwrite|fread|chmod)\s*\(/.test(context);
                 const hasVoidCast = /\(\s*void\s*\)\s*(fwrite|fread|chmod)\s*\(/.test(line);
                 // fwrite inside condition: check parens balance in PREFIX only
                 const prefix = line.substring(0, ioMatch.index);

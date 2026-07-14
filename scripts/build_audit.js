@@ -80,7 +80,7 @@ function extractSources(cmakeContent, cmakeDir) {
 
     const patterns = [
         /(?:add_library|add_executable)\s*\(\s*([^)]+)\)/g,
-        /target_sources\s*\(\s*\w+\s+(?:PRIVATE|PUBLIC|INTERFACE)?\s*([^)]+)\)/g,
+        /target_sources\s*\(\s*[^\s)]+\s+(?:PRIVATE|PUBLIC|INTERFACE)?\s*([^)]+)\)/g,
     ];
 
     for (const re1 of patterns) {

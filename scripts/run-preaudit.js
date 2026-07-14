@@ -59,7 +59,7 @@ async function main() {
         ({ findings: chainBreaks } = await runScript('ctrl_chain_check.js'));
         ({ findings: stackRisks } = await runScript('stack_depth_audit.js'));
     }
-    if (isApp || (!isEmbedded && !hasPlatformIO)) {
+    if (isApp) {
         ({ findings: buildOrphans } = await runScript('build_audit.js'));
         ({ findings: syscallIssues } = await runScript('syscall_audit.js'));
     }
