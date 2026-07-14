@@ -58,8 +58,8 @@ function main(dir) {
             const lineStart = content.lastIndexOf('\n', m.index) + 1;
             const lineText = content.substring(lineStart, m.index).trim();
             if (/^#\s*define/.test(lineText)) continue;
-            // Skip function pointer declarations: check line prefix for (*NAME)
-            if (/\(\s*\*\s*\w+\s*\)\s*$/.test(lineText)) continue;
+            // Skip function pointer declarations: lineText ends with (*
+            if (/\(\s*\*\s*$/.test(lineText)) continue;
             const argsStr = m[2];
             // Skip if args contain nested parens (regex truncated by [^)]*)
             if (argsStr.includes('(')) continue;

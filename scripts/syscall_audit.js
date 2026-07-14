@@ -45,13 +45,16 @@ function main(dir) {
             const line = strippedLines[i];
 
             // B31: Unchecked I/O — fwrite must be inside control-flow condition to be checked
-            if (/\b(fwrite|fread|chmod)\s*\(/.test(line)) {
+            const ioMatch = line.match(/\b(fwrite|fread|chmod)\s*\(/);
+            if (ioMatch) {
                 const context = strippedLines.slice(Math.max(0, i - 3), i + 1).join('\n');
                 const hasAssignment = /\b\w+\s*=\s*(fwrite|fread|chmod)\s*\(/.test(context);
                 const hasVoidCast = /\(\s*void\s*\)\s*(fwrite|fread|chmod)\s*\(/.test(line);
-                // fwrite inside condition: use parens counting to handle nested ()
-                const inCondition = /\b(if|while|for|switch|return)\b[^\n]*\b(fwrite|fread|chmod)\s*\(/.test(line) &&
-                    (line.match(/\(/g) || []).length > (line.match(/\)/g) || []).length;
+                // fwrite inside condition: check parens balance in PREFIX only
+                const prefix = line.substring(0, ioMatch.index);
+                const pOpen = (prefix.match(/\(/g) || []).length;
+                const pClose = (prefix.match(/\)/g) || []).length;
+                const inCondition = /\b(if|while|for|switch|return)\b/.test(prefix) && pOpen > pClose;
                 // Multi-line condition: check prev + context, use parens balance
                 const prevLine = (strippedLines[i - 1] || '').trim();
                 const multiLineContext = strippedLines.slice(Math.max(0, i - 5), i).join('\n');
