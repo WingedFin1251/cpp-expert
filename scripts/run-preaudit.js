@@ -55,22 +55,25 @@ async function main() {
     console.error(`[preaudit] Project type: ${isEmbedded ? 'embedded' : 'app'}`);
 
     // Project-specific scripts
-    let pinConflicts = [], chainBreaks = [], stackRisks = [];
-    let buildOrphans = [], syscallIssues = [];
+    let pinConflicts = [], pinStatus = 'skipped';
+    let chainBreaks = [], chainStatus = 'skipped';
+    let stackRisks = [], stackStatus = 'skipped';
+    let buildOrphans = [], buildStatus = 'skipped';
+    let syscallIssues = [], syscallStatus = 'skipped';
 
     if (isEmbedded) {
-        ({ findings: pinConflicts } = await runScript('pin_audit.js'));
-        ({ findings: chainBreaks } = await runScript('ctrl_chain_check.js'));
-        ({ findings: stackRisks } = await runScript('stack_depth_audit.js'));
+        ({ findings: pinConflicts, status: pinStatus } = await runScript('pin_audit.js'));
+        ({ findings: chainBreaks, status: chainStatus } = await runScript('ctrl_chain_check.js'));
+        ({ findings: stackRisks, status: stackStatus } = await runScript('stack_depth_audit.js'));
     }
     if (isApp) {
-        ({ findings: buildOrphans } = await runScript('build_audit.js'));
-        ({ findings: syscallIssues } = await runScript('syscall_audit.js'));
+        ({ findings: buildOrphans, status: buildStatus } = await runScript('build_audit.js'));
+        ({ findings: syscallIssues, status: syscallStatus } = await runScript('syscall_audit.js'));
     }
 
     // Always run: common scripts
-    const { findings: styleIssues } = await runScript('style_audit.js');
-    const { findings: apiIssues } = await runScript('api_style_audit.js');
+    const { findings: styleIssues, status: styleStatus } = await runScript('style_audit.js');
+    const { findings: apiIssues, status: apiStatus } = await runScript('api_style_audit.js');
 
     const report = {
         meta: {
@@ -78,13 +81,13 @@ async function main() {
             project_type: isEmbedded ? 'embedded' : 'app',
             excluded_dirs: [...new Set(excludeDirs)], target_dir: targetDir,
             modules: {
-                pin_audit: { status: isEmbedded ? 'ok' : 'skipped', findings: pinConflicts.length },
-                ctrl_chain: { status: isEmbedded ? 'ok' : 'skipped', findings: chainBreaks.length },
-                stack_depth: { status: isEmbedded ? 'ok' : 'skipped', findings: stackRisks.length },
-                build_audit: { status: isApp ? 'ok' : 'skipped', findings: buildOrphans.length },
-                syscall_audit: { status: isApp ? 'ok' : 'skipped', findings: syscallIssues.length },
-                style_audit: { status: 'ok', findings: styleIssues.length },
-                api_style_audit: { status: 'ok', findings: apiIssues.length }
+                pin_audit: { status: pinStatus, findings: pinConflicts.length },
+                ctrl_chain: { status: chainStatus, findings: chainBreaks.length },
+                stack_depth: { status: stackStatus, findings: stackRisks.length },
+                build_audit: { status: buildStatus, findings: buildOrphans.length },
+                syscall_audit: { status: syscallStatus, findings: syscallIssues.length },
+                style_audit: { status: styleStatus, findings: styleIssues.length },
+                api_style_audit: { status: apiStatus, findings: apiIssues.length }
             }
         },
         pin_conflicts: pinConflicts, control_chain_breaks: chainBreaks,

@@ -77,8 +77,7 @@ When `unified-audit-report.json` is present, you MUST use it as the **sole sourc
 | `syscall_issues` | `id: B33` | 🔴 CRITICAL — "putenv on string literal — UB" |
 | `syscall_issues` | `id: B36` | 🟡 MEDIUM — "dlopen without dlclose" |
 | `syscall_issues` | `id: B37` | 🔴 CRITICAL — "fork without waitpid — zombie leak" |
-| `syscall_issues` | `id: B38` | 🟠 HIGH — "deprecated C API" |
-| `api_mismatches` | `id: B34` | 🔴 CRITICAL — "API version inconsistency" |
+| `api_mismatches` | `id: B34` | 🔴 CRITICAL — "macro arity mismatch — possible API version mixing" |
 | `api_mismatches` | `id: B35` | 🟠 HIGH — "deprecated API usage" |
 
 **Degradation mode (no JSON available):**
