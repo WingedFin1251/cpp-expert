@@ -39,13 +39,15 @@ function findCMakeFiles(dirOrDirs) {
 
 function collectVariables(cmakeContent) {
     const vars = {};
+    // Strip strings to avoid parens inside strings breaking [^)]+
+    const noStrings = cmakeContent.replace(/"[^"]*"/g, '""');
     let m;
     const setRe = /set\s*\(\s*(\w+)\s+([^)]+)\)/gi;
-    while ((m = setRe.exec(cmakeContent)) !== null) {
+    while ((m = setRe.exec(noStrings)) !== null) {
         vars[m[1]] = m[2].trim();
     }
     const listRe = /list\s*\(\s*APPEND\s+(\w+)\s+([^)]+)\)/gi;
-    while ((m = listRe.exec(cmakeContent)) !== null) {
+    while ((m = listRe.exec(noStrings)) !== null) {
         const val = m[2].trim();
         vars[m[1]] = vars[m[1]] ? vars[m[1]] + ' ' + val : val;
     }

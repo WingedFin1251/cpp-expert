@@ -32,7 +32,7 @@ function main(dir) {
     let forkCount = 0, waitpidCount = 0;
     const forkFiles = new Set(), waitpidFiles = new Set();
     const dlopenReported = new Set();
-    let hasSigIgn = false;
+    let hasSigIgn = false, hasBulkReap = false;
 
     for (const f of files) {
         const raw = fs.readFileSync(f, 'utf-8');
@@ -48,7 +48,11 @@ function main(dir) {
             const ioMatch = line.match(/\b(fwrite|fread|chmod)\s*\(/);
             if (ioMatch) {
                 const context = strippedLines.slice(Math.max(0, i - 3), i + 1).join('\n');
-                const hasAssignment = /\b\w+\s*=\s*(?:[\w\s()*+?:!>-])*(fwrite|fread|chmod)\s*\(/.test(context);
+                // hasAssignment: check for `=` before func with unclosed parens (covers all ops/casts)
+                const eqIdx = context.indexOf('=');
+                const hasAssignment = eqIdx >= 0 &&
+                    (context.substring(eqIdx, context.length).match(/\(/g) || []).length >
+                    (context.substring(eqIdx, context.length).match(/\)/g) || []).length;
                 const hasVoidCast = /\(\s*void\s*\)\s*(fwrite|fread|chmod)\s*\(/.test(context);
                 // fwrite inside condition: check parens balance in PREFIX only
                 const prefix = line.substring(0, ioMatch.index);
@@ -108,6 +112,7 @@ function main(dir) {
             // Note: deprecated C API detection (sprintf/strcpy/gets) is handled by api_style_audit.js → B35
         }
 
+        if (!hasBulkReap && /\bwhile\b[\s\S]{0,200}\bwaitpid\s*\(/.test(stripped)) hasBulkReap = true;
         const fk = (stripped.match(/\bfork\s*\(/g) || []).length;
         const wp = (stripped.match(/\b(?:waitpid|wait)\s*\(/g) || []).length;
         forkCount += fk;
@@ -116,8 +121,7 @@ function main(dir) {
         if (wp > 0) waitpidFiles.add(f);
     }
 
-    // Exempt SIGCHLD=SIG_IGN and bulk-reap (while waitpid > 0)
-    const hasBulkReap = /\bwhile\b[\s\S]*\bwaitpid\s*\(/.test(stripped);
+    // Exempt SIGCHLD=SIG_IGN and bulk-reap (while waitpid > 0, tracked per-file above)
     if (forkCount > waitpidCount && !hasSigIgn && !hasBulkReap) {
         issues.push({
             id: 'B37', severity: 'CRITICAL', pattern: 'fork_wait_mismatch',
