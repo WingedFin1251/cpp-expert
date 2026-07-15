@@ -2,6 +2,13 @@ const { execFile } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
+// Node.js version check — degradation fallback if < 18
+const nodeMajor = parseInt(process.versions.node.split('.')[0], 10);
+if (nodeMajor < 18) {
+    console.error(`[preaudit] ERROR: Node.js >= 18 required (found v${process.versions.node}). Please upgrade or run manual review.`);
+    process.exit(1);
+}
+
 const args = process.argv.slice(2);
 const includeDirs = [];
 const defaultExcludes = ['drivers', 'middlewares', '.git', 'node_modules', 'build', 'debug', 'release', '.vscode'];
@@ -116,7 +123,7 @@ async function main() {
 
     const report = {
         meta: {
-            tool_version: '1.6.0', scan_time_ms: Date.now() - start,
+            tool_version: '1.6.1', scan_time_ms: Date.now() - start,
             project_type: isEmbedded ? 'embedded' : 'app',
             build_system: buildSystem,
             build_info: { cmake: hasCMake, makefile: hasMakefile, detected: buildSystem },
